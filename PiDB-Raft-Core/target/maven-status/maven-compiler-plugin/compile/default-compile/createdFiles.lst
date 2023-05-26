@@ -5,13 +5,13 @@ rpc/RaftProto$VoteRequestOrBuilder.class
 rpc/RaftRPCGrpc$RaftRPCFutureStub.class
 raft/storage/RaftPersistor.class
 rpc/RaftProto$AppendRequestOrBuilder.class
-raft/RaftServer$1.class
 raft/storage/Persistor.class
+raft/RaftMessageSender.class
 rpc/RaftRPCGrpc$RaftRPCImplBase.class
 rpc/RaftProto$Entry$1.class
 rpc/RaftRPCGrpc$RaftRPCBaseDescriptorSupplier.class
-raft/RaftServer$RaftService.class
 rpc/RaftRPCGrpc$RaftRPCMethodDescriptorSupplier.class
+raft/RaftMessageReceiver.class
 raft/RaftServerRole.class
 raft/RaftServer.class
 rpc/RaftProto$Action$1.class
@@ -21,7 +21,6 @@ rpc/RaftProto$VoteResponseOrBuilder.class
 rpc/RaftProto$AppendResponse$Builder.class
 rpc/RaftRPCGrpc$RaftRPCStub.class
 rpc/RaftRPCGrpc$RaftRPCFileDescriptorSupplier.class
-raft/RaftClient.class
 rpc/RaftProto.class
 rpc/RaftProto$AppendResponse.class
 rpc/RaftProto$VoteRequest$1.class
@@ -38,8 +37,10 @@ rpc/RaftRPCGrpc$RaftRPCBlockingStub.class
 rpc/RaftProto$AppendResponseOrBuilder.class
 rpc/RaftProto$Action.class
 rpc/RaftProto$AppendRequest$Builder.class
+raft/RaftMessageReceiver$1.class
 rpc/RaftRPCGrpc.class
 rpc/RaftProto$VoteResponse$1.class
 rpc/RaftProto$Entry.class
+raft/RaftMessageReceiver$RaftService.class
 rpc/RaftRPCGrpc$1.class
 rpc/RaftProto$VoteResponse$Builder.class

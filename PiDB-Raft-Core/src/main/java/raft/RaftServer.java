@@ -4,9 +4,12 @@ import raft.storage.Persistor;
 import raft.storage.RaftPersistor;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import rpc.RaftProto;
 
 /**
  * This is a class that represents a Raft Server Node, which is a server that runs the raft services.
@@ -19,9 +22,9 @@ public class RaftServer {
      * The RaftMessageReceiver is responsible for receiving the RPC and sending back the processed results.
      **/
     private RaftMessageReceiver receiver;
-    private RaftMessageSender sender;
+    private Map<Integer, RaftMessageSender> serverToSender;
 
-    private final int serverId;
+    private final int serverID;
 
     private final int port;
 
@@ -43,7 +46,7 @@ public class RaftServer {
 
     private Persistor persistor;
 
-    private static final Logger logger = Logger.getLogger(RaftServer.class.getName());
+    private static final Logger logger = LogManager.getLogger(RaftServer.class.getName());
 
     private boolean isDead; // A flag for testing. See MIT6.824 go sample code.
 
@@ -51,11 +54,9 @@ public class RaftServer {
 
     private int leaderID;
 
-    public RaftServer(int serverId, String host, int port) {
-        this.serverId = serverId;
+    public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress) {
+        this.serverID = serverID;
         this.port = port;
-        this.receiver = new RaftMessageReceiver(serverId, port, this);
-        this.sender = new RaftMessageSender(host, port, this);
         this.currentTerm = 0;
         this.votedFor = -1;
         this.commitIndex = 0;
@@ -68,6 +69,25 @@ public class RaftServer {
         this.isDead = false;
         this.lock = new Object();
         this.leaderID = -1;
+
+        // Start the sender and receiver here.
+        /**
+         * For the receiver, it's the server of the gRPC service hence for each raftServer entity we only need one receiver.
+         * */
+        this.receiver = new RaftMessageReceiver(serverID, port, this);
+        /**
+         * For the sender, for each raftServer, we need to send the RPC to all other raft servers.
+         * Hence, we need to construct multiple sender. The number of sender is equal to the number of all other raft servers.
+         * */
+        this.serverToSender = new HashMap<>();
+        for (int serverId : serverToAddress.keySet()) {
+            // Only connect with other servers, hence only construct senders to other servers.
+            if (serverId != serverID) {
+                String senderHost = serverToAddress.get(serverId).getHost();
+                int senderPort = serverToAddress.get(serverId).getPort();
+                serverToSender.put(serverId, new RaftMessageSender(senderHost, senderPort, this));
+            }
+        }
     }
 
     public synchronized int getCurrentTerm() {
@@ -88,6 +108,17 @@ public class RaftServer {
 
     public synchronized int getVotedFor() {
         return votedFor;
+    }
+
+    public int getServerId() {
+        return serverID;
+    }
+
+    public void appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> entries, int leaderCommit) {
+        // This code is for testing....
+        RaftMessageSender sender = serverToSender.get(2);
+        RaftProto.AppendResponse response = sender.appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
+        System.out.println(response);
     }
 
 

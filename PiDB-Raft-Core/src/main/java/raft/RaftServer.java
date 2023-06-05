@@ -64,7 +64,7 @@ public class RaftServer {
         this.nextIndex = new HashMap<>();
         this.matchIndex = new HashMap<>();
         this.electionTimer = new Timer();
-        this.role = RaftServerRole.FOLLOWER;
+        this.role = RaftServerRole.CANDIDATE;
         this.persistor = new RaftPersistor();
         this.isDead = false;
         this.lock = new Object();
@@ -114,12 +114,15 @@ public class RaftServer {
         return serverID;
     }
 
-    public void appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> entries, int leaderCommit) {
+    public void appendEntries(int serverID, int term, int leaderId, int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> entries, int leaderCommit) {
         // This code is for testing....
-        RaftMessageSender sender = serverToSender.get(2);
+        RaftMessageSender sender = serverToSender.get(serverID);
         RaftProto.AppendResponse response = sender.appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
-        System.out.println(response);
     }
 
+     public void requestVote(int serverID, int term, int candidateID, int lastLogIndex, int lastLogTerm) {
+        RaftMessageSender sender = serverToSender.get(serverID);
+        RaftProto.VoteResponse response = sender.requestVote(term, candidateID, lastLogIndex, lastLogTerm);
+     }
 
 }

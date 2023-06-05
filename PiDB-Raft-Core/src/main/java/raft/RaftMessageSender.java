@@ -48,12 +48,12 @@ public class RaftMessageSender {
         return response;
     }
 
-    public RaftProto.VoteResponse requestVote() {
+    public RaftProto.VoteResponse requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) {
         RaftProto.VoteRequest request = RaftProto.VoteRequest.newBuilder()
-                .setCandidateID(1)
-                .setTerm(1)
-                .setLastLogIndex(-1)
-                .setLastLogIndex(-1)
+                .setCandidateID(candidateID)
+                .setTerm(term)
+                .setLastLogIndex(lastLogIndex)
+                .setLastLogTerm(lastLogTerm)
                 .build();
         RaftProto.VoteResponse response = null;
         try {

@@ -7,12 +7,12 @@ import rpc.RaftRPCGrpc;
 
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class RaftMessageSender {
-    private static final Logger logger = LogManager.getLogger(RaftMessageSender.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(RaftMessageSender.class);
     private final RaftRPCGrpc.RaftRPCBlockingStub blockingStub;
     private final RaftRPCGrpc.RaftRPCStub asyncStub;
 
@@ -40,10 +40,10 @@ public class RaftMessageSender {
         RaftProto.AppendResponse response = null;
         try {
             response = blockingStub.appendEntries(request);
-            logger.info("Raft Server {} received append entry response: {}", raftServer.getServerId(), response);
+            LOG.info("Raft Server {} received append entry response: {}", raftServer.getServerId(), response);
             System.out.println(response);
         } catch (Exception e) {
-            logger.warn("Raft Server {} RPC failed to append entries.", raftServer.getServerId());
+            LOG.warn("Raft Server {} RPC failed to append entries.", raftServer.getServerId());
         }
         return response;
     }
@@ -58,10 +58,10 @@ public class RaftMessageSender {
         RaftProto.VoteResponse response = null;
         try {
             response = blockingStub.requestVote(request);
-            logger.info( "Raft Server {} received request vote response: {}", raftServer.getServerId(), response);
-            System.out.println(response);
+            LOG.info( "Raft Server {} received request vote response: {}", raftServer.getServerId(), response);
+//            System.out.println(response);
         } catch (Exception e) {
-            logger.warn("Raft Server {} RPC failed to request vote.", raftServer.getServerId());
+            LOG.warn("Raft Server {} RPC failed to request vote.", raftServer.getServerId());
         }
         return response;
     }

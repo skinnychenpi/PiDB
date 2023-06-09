@@ -3,18 +3,15 @@ package raft;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
-import raft.storage.Persistor;
-import raft.storage.RaftPersistor;
 import rpc.RaftProto;
 import rpc.RaftRPCGrpc;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.logging.Logger;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class RaftMessageReceiver {
@@ -28,7 +25,7 @@ public class RaftMessageReceiver {
 
     private final RaftServer raftServer;
 
-    private static final Logger logger = Logger.getLogger(RaftMessageReceiver.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(RaftMessageReceiver.class);
     public RaftMessageReceiver(int serverId, int port, RaftServer raftServer) {
         this.serverId = serverId;
         this.port = port;
@@ -79,7 +76,7 @@ public class RaftMessageReceiver {
     /** Start serving requests. */
     public void start() throws IOException {
         gRPCServer.start();
-        logger.info("Server started, listening on " + port);
+        LOG.info("Server started, listening on " + port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // Use stderr here since the logger may have been reset by its JVM shutdown hook.
             System.err.println("*** shutting down gRPC server since JVM is shutting down");
@@ -104,7 +101,7 @@ public class RaftMessageReceiver {
     /**
      * Await termination on the main thread since the grpc library uses daemon threads.
      */
-    private void blockUntilShutdown() throws InterruptedException {
+    public void blockUntilShutdown() throws InterruptedException {
         if (gRPCServer != null) {
             gRPCServer.awaitTermination();
         }

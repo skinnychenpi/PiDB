@@ -1,14 +1,16 @@
 package raft;
 
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import raft.storage.Persistor;
 import raft.storage.RaftPersistor;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import rpc.RaftProto;
 
 /**
@@ -46,13 +48,17 @@ public class RaftServer {
 
     private Persistor persistor;
 
-    private static final Logger logger = LogManager.getLogger(RaftServer.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(RaftServer.class);
 
     private boolean isDead; // A flag for testing. See MIT6.824 go sample code.
 
     private final Object lock;
 
     private int leaderID;
+
+    private ScheduledExecutorService scheduledExecutorService;
+
+    private ScheduledFuture electionScheduledFuture;
 
     public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress) {
         this.serverID = serverID;
@@ -88,6 +94,17 @@ public class RaftServer {
                 serverToSender.put(serverId, new RaftMessageSender(senderHost, senderPort, this));
             }
         }
+
+        scheduledExecutorService = Executors.newScheduledThreadPool(2);
+        electionScheduledFuture = null;
+
+    }
+
+    public void start() throws Exception {
+        LOG.info("Server {} start...", serverID);
+        System.out.println("Server starts.");
+        receiver.start();
+//        receiver.blockUntilShutdown();
     }
 
     public synchronized int getCurrentTerm() {
@@ -120,9 +137,37 @@ public class RaftServer {
         RaftProto.AppendResponse response = sender.appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
     }
 
-     public void requestVote(int serverID, int term, int candidateID, int lastLogIndex, int lastLogTerm) {
-        RaftMessageSender sender = serverToSender.get(serverID);
-        RaftProto.VoteResponse response = sender.requestVote(term, candidateID, lastLogIndex, lastLogTerm);
+     private void requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) {
+        for (int targetServerID : serverToSender.keySet()) {
+            // TODO: Here we need to change the logic into async such as using completableFuture rather than using sync like this.
+            // TODO: This is only for testing......
+            RaftMessageSender sender = serverToSender.get(targetServerID);
+            RaftProto.VoteResponse response = sender.requestVote(term, candidateID, lastLogIndex, lastLogTerm);
+            LOG.info("Server {} receives message from server {} with contents {}", this.serverID, targetServerID, response);
+
+            // TODO: Only for testing, delete it when logger is feasible.
+            System.out.println(targetServerID);
+            System.out.println(response);
+        }
+     }
+
+
+     // Should check this method.
+     public void  startNextVote() {
+        electionScheduledFuture = scheduledExecutorService.schedule(() -> {
+            requestVote(currentTerm, serverID, 0, 0);
+        }, getNextVoteTimer(), TimeUnit.MILLISECONDS);
+     }
+
+     private int getNextVoteTimer() {
+         // Here we assume the period to start a vote is generated randomly from a fixed interval.
+         // TODO: In the future, the lower bound and upper bound should be retrieved from the config file.
+         int lowerBound = 500;
+         int upperBound = 1000;
+         double period = lowerBound + (upperBound - lowerBound) * Math.random();
+         int periodInInt = (int) period;
+         LOG.info("The vote timer is set as {}ms for server {}", periodInInt, serverID);
+         return (int) period;
      }
 
 }

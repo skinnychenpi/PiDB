@@ -21,16 +21,16 @@ public class RaftMessageReceiver {
 
     private final Server gRPCServer;
 
-    private final Object lock;
+    private final Object raftServerSharedLock;
 
     private final RaftServer raftServer;
 
     private static final Logger LOG = LoggerFactory.getLogger(RaftMessageReceiver.class);
-    public RaftMessageReceiver(int serverId, int port, RaftServer raftServer) {
+    public RaftMessageReceiver(int serverId, int port, RaftServer raftServer, Object raftServerSharedLock) {
         this.serverId = serverId;
         this.port = port;
         this.gRPCServer = ServerBuilder.forPort(port).addService(new RaftService()).build();
-        this.lock = new Object();
+        this.raftServerSharedLock = raftServerSharedLock;
         this.raftServer = raftServer;
     }
 
@@ -76,7 +76,7 @@ public class RaftMessageReceiver {
     /** Start serving requests. */
     public void start() throws IOException {
         gRPCServer.start();
-        LOG.info("Server started, listening on " + port);
+        LOG.info("Server {} started, listening on {}", raftServer.getServerId(), port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // Use stderr here since the logger may have been reset by its JVM shutdown hook.
             System.err.println("*** shutting down gRPC server since JVM is shutting down");
@@ -123,19 +123,19 @@ public class RaftMessageReceiver {
     private class RaftService extends RaftRPCGrpc.RaftRPCImplBase {
         @Override
         public void appendEntries(RaftProto.AppendRequest request, StreamObserver<RaftProto.AppendResponse> responseObserver) {
-            responseObserver.onNext(appendEntries(request));
+            responseObserver.onNext(handleAppendEntries(request));
             responseObserver.onCompleted();
         }
 
         /**
          * This is a dummy method for now.
          */
-        private RaftProto.AppendResponse appendEntries(RaftProto.AppendRequest request) {
+        private RaftProto.AppendResponse handleAppendEntries(RaftProto.AppendRequest request) {
             RaftProto.AppendResponse.Builder builder = RaftProto.AppendResponse.newBuilder();
             List<RaftProto.Entry> entries = request.getEntriesList();
             int leaderTerm = request.getTerm();
             int currentTerm = raftServer.getCurrentTerm();
-            synchronized (lock) {
+            synchronized (raftServerSharedLock) {
                 if (leaderTerm < currentTerm) {
                     return builder.setSuccess(false).setTerm(currentTerm).build();
                 }
@@ -143,10 +143,7 @@ public class RaftMessageReceiver {
             // Currently only heart beat is implemented.
             // If it is a heart beat:
             if (entries.size() == 0) {
-                synchronized (lock) {
-                    raftServer.setRole(RaftServerRole.FOLLOWER);
-                    raftServer.setLeaderID(request.getLeaderID());
-                }
+                raftServer.onReceiveHeartbeat(request.getLeaderID());
             }
 
             return RaftProto.AppendResponse.newBuilder()
@@ -157,29 +154,29 @@ public class RaftMessageReceiver {
 
         @Override
         public void requestVote(RaftProto.VoteRequest request, StreamObserver<RaftProto.VoteResponse> responseObserver) {
-            responseObserver.onNext(requestVote(request));
+            responseObserver.onNext(handleVoteRequest(request));
             responseObserver.onCompleted();
         }
 
         /**
         * This is the core logic of requestVote RPC. Please refer to Figure 2 of Raft paper.
         */
-        private RaftProto.VoteResponse requestVote(RaftProto.VoteRequest request) {
+        private RaftProto.VoteResponse handleVoteRequest(RaftProto.VoteRequest request) {
             RaftProto.VoteResponse.Builder responseBuilder = RaftProto.VoteResponse.newBuilder();
             int candidateTerm = request.getTerm();
             int candidateID = request.getCandidateID();
             int currentTerm = raftServer.getCurrentTerm();
-            synchronized (lock) {
+            synchronized (raftServerSharedLock) {
                 if (candidateTerm >= currentTerm) {
                     int votedFor = raftServer.getVotedFor();
                     // Here we need to lock.
-                    if (votedFor == -1) {
-                        votedFor = candidateID;
-                    }
-                    if (votedFor == candidateID) {
+                    if (votedFor == RaftServer.NO_VOTE) {
+                        raftServer.setVotedFor(candidateID);
                         // grant vote if the candidate's log is at least as up to date as receiver's log
                         // up to date is defined in 5.4.1
                         if (candidateTerm > currentTerm || (candidateTerm == currentTerm && request.getLastLogIndex() >= getLastLogIndex())) {
+                            LOG.debug("Server {} currentTerm = {}, votedFor = {}, receives candidateTerm = {} from Server {}",
+                                    raftServer.getServerId(), raftServer.getCurrentTerm(), raftServer.getVotedFor(), candidateTerm, candidateID);
                             return responseBuilder.setVoteGranted(true).setTerm(currentTerm).build();
                         }
                     }

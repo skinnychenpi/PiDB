@@ -4,9 +4,6 @@ import raft.RaftServerAddress;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.apache.log4j.PropertyConfigurator;
 
@@ -27,7 +24,7 @@ public class RaftCluster {
         RaftServer server2 = new RaftServer(2, "localhost", 7071, serverAddressMap);
         RaftServer server3 = new RaftServer(3, "localhost", 7072, serverAddressMap);
 
-        ExecutorService executor = Executors.newFixedThreadPool(3);
+//        ExecutorService executor = Executors.newFixedThreadPool(3);
 
         try {
             server1.start();
@@ -39,7 +36,9 @@ public class RaftCluster {
         }
 
         try {
-            server1.startNextVote();
+            server1.resetElectionTimer();
+            server2.resetElectionTimer();
+            server3.resetElectionTimer();
         } catch (Exception e) {
             System.out.println("Error at start voting...");
             e.printStackTrace();

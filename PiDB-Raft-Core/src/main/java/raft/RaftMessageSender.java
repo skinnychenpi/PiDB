@@ -117,7 +117,7 @@ public class RaftMessageSender {
     private class VoteObserver implements StreamObserver<RaftProto.VoteResponse> {
         @Override
         public void onNext(RaftProto.VoteResponse response) {
-            raftServer.onReceiveVoteResponse(response);
+            raftServer.onSenderReceiveVoteResponse(response);
         }
 
         @Override
@@ -135,7 +135,7 @@ public class RaftMessageSender {
     private class AppendEntryObserver implements StreamObserver<RaftProto.AppendResponse> {
         @Override
         public void onNext(RaftProto.AppendResponse response) {
-            raftServer.onReceiveAppendResponse(response);
+            raftServer.onSenderReceiveAppendResponse(response);
         }
 
         @Override

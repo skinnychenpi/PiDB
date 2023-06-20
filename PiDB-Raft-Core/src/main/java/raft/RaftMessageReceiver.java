@@ -123,57 +123,75 @@ public class RaftMessageReceiver {
     private class RaftService extends RaftRPCGrpc.RaftRPCImplBase {
         @Override
         public void appendEntries(RaftProto.AppendRequest request, StreamObserver<RaftProto.AppendResponse> responseObserver) {
-            responseObserver.onNext(handleAppendEntries(request));
+            responseObserver.onNext(receiverHandleAppendRequest(request));
             responseObserver.onCompleted();
         }
 
         /**
-         * This is a dummy method for now.
+         * Currently only heartbeat is implemented.
          */
-        private RaftProto.AppendResponse handleAppendEntries(RaftProto.AppendRequest request) {
+        private RaftProto.AppendResponse receiverHandleAppendRequest(RaftProto.AppendRequest request) {
             RaftProto.AppendResponse.Builder builder = RaftProto.AppendResponse.newBuilder();
             List<RaftProto.Entry> entries = request.getEntriesList();
             int leaderTerm = request.getTerm();
             int currentTerm = raftServer.getCurrentTerm();
             synchronized (raftServerSharedLock) {
-                if (leaderTerm < currentTerm) {
-                    return builder.setSuccess(false).setTerm(currentTerm).build();
+                if (leaderTerm < raftServer.getCurrentTerm()) {
+                    return builder.setSuccess(false).setTerm(raftServer.getCurrentTerm()).build();
+                }
+                // If RPC request or response contains term T > currentTerm, set currentTerm = T, convert to follower.
+                if (leaderTerm > currentTerm) {
+                    raftServer.setCurrentTerm(leaderTerm);
+                    raftServer.setRole(RaftServerRole.FOLLOWER);
+                    raftServer.setVotedFor(RaftServer.NO_VOTE);
                 }
             }
-            // Currently only heart beat is implemented.
             // If it is a heart beat:
             if (entries.size() == 0) {
-                raftServer.onReceiveHeartbeat(request.getLeaderID());
+                raftServer.onReceiverReceiveHeartbeat(request.getLeaderID());
+                return RaftProto.AppendResponse.newBuilder()
+                        .setSuccess(true)
+                        .setTerm(currentTerm)
+                        .build();
             }
-
+            // TODO: Currently the append entry receiving logic is not implemented, only the skeleton method is created.
+            // If it is not a heartbeat:
+            raftServer.onReceiverReceiveAppendRequest();
             return RaftProto.AppendResponse.newBuilder()
-                    .setSuccess(true)
+                    .setSuccess(false)
                     .setTerm(currentTerm)
                     .build();
         }
 
         @Override
         public void requestVote(RaftProto.VoteRequest request, StreamObserver<RaftProto.VoteResponse> responseObserver) {
-            responseObserver.onNext(handleVoteRequest(request));
+            responseObserver.onNext(receiverHandleVoteRequest(request));
             responseObserver.onCompleted();
         }
 
         /**
         * This is the core logic of requestVote RPC. Please refer to Figure 2 of Raft paper.
         */
-        private RaftProto.VoteResponse handleVoteRequest(RaftProto.VoteRequest request) {
+        private RaftProto.VoteResponse receiverHandleVoteRequest(RaftProto.VoteRequest request) {
             RaftProto.VoteResponse.Builder responseBuilder = RaftProto.VoteResponse.newBuilder();
             int candidateTerm = request.getTerm();
             int candidateID = request.getCandidateID();
             int currentTerm = raftServer.getCurrentTerm();
             synchronized (raftServerSharedLock) {
                 if (candidateTerm >= currentTerm) {
+                    // If RPC request or response contains term T > currentTerm, set currentTerm = T, convert to Follower.
+                    if (candidateTerm > currentTerm) {
+                        raftServer.setCurrentTerm(candidateTerm);
+                        raftServer.setRole(RaftServerRole.FOLLOWER);
+                        raftServer.setVotedFor(RaftServer.NO_VOTE);
+                    }
                     int votedFor = raftServer.getVotedFor();
                     // Here we need to lock.
                     if (votedFor == RaftServer.NO_VOTE) {
                         raftServer.setVotedFor(candidateID);
                         // grant vote if the candidate's log is at least as up to date as receiver's log
                         // up to date is defined in 5.4.1
+                        // TODO: Here the method getLastLogIndex() must be reimplemented!!!!!!
                         if (candidateTerm > currentTerm || (candidateTerm == currentTerm && request.getLastLogIndex() >= getLastLogIndex())) {
                             LOG.debug("Server {} currentTerm = {}, votedFor = {}, receives candidateTerm = {} from Server {}",
                                     raftServer.getServerId(), raftServer.getCurrentTerm(), raftServer.getVotedFor(), candidateTerm, candidateID);

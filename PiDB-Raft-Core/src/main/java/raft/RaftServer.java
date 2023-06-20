@@ -31,11 +31,17 @@ public class RaftServer {
     private final int port;
 
     private final int numOfServers;
-
+    /**
+     * A counter that counts how many votes a candidate receives during election for each term.
+     * Note that it will be reset to 0 only when the server is turn into a new candidate.
+     * */
     private int votesReceived;
 
     private int currentTerm;
-
+    /**
+     * Candidate server ID that received the vote from this server in the current term.
+     * Note that every term one vote. If term increases, votes will be reset as NO_VOTE.
+     * */
     private int votedFor;
 
     private int commitIndex;
@@ -120,6 +126,10 @@ public class RaftServer {
         return currentTerm;
     }
 
+    public synchronized void setCurrentTerm(int currentTerm) {
+        this.currentTerm = currentTerm;
+    }
+
     public synchronized int getCommitIndex() {
         return commitIndex;
     }
@@ -130,7 +140,7 @@ public class RaftServer {
 
     public void setRole(RaftServerRole role) {
         this.role = role;
-        LOG.info("Server {} set role to {}", serverID, role);
+        LOG.info("Server {} set role to {} at term {}", serverID, role, currentTerm);
     }
 
     public synchronized void incrementTerm() {
@@ -146,6 +156,7 @@ public class RaftServer {
     }
 
     public void setVotedFor(int votedFor) {
+        LOG.debug("Server {} vote for Server {} as leader at term {}", serverID, votedFor, currentTerm);
         this.votedFor = votedFor;
     }
     public int getServerId() {
@@ -174,38 +185,28 @@ public class RaftServer {
 
 
 
-     public void onReceiveVoteResponse(RaftProto.VoteResponse response) {
+     public void onSenderReceiveVoteResponse(RaftProto.VoteResponse response) {
         // TODO: need to change the protobuf file so that when the server sends back a RPC response, the receiver can know who sends this message.
          LOG.info("Server {} receives vote response: term = {}, voteGranted = {}",
-                 this.serverID, response.getTerm(), response.getVoteGranted());
+                 serverID, response.getTerm(), response.getVoteGranted());
          synchronized (lock) {
-             if (getRole() == RaftServerRole.CANDIDATE && response.getVoteGranted()) {
-                 votesReceived++;
-                 // Get elected as a leader, remember to plus one as by default the RaftServer will vote for itself.
-                 if (votesReceived + 1 > numOfServers / 2) {
-                     votesReceived = 0;
-                     setRole(RaftServerRole.LEADER);
-                     sendHeartbeats();
+             if (response.getTerm() > currentTerm) {
+                 currentTerm = response.getTerm();
+                 setRole(RaftServerRole.FOLLOWER);
+             }
+             if (getRole() == RaftServerRole.CANDIDATE) {
+                 if (response.getVoteGranted()) {
+                     votesReceived++;
+                     // Get elected as a leader, remember to plus one as by default the RaftServer will vote for itself.
+                     if (votesReceived + 1 > numOfServers / 2) {
+                         setRole(RaftServerRole.LEADER);
+                         sendHeartbeats();
+                     }
                  }
+             } else {
+                 LOG.info("Server {} is not a candidate but a {}.", serverID, getRole());
              }
          }
-     }
-
-     public void onReceiveHeartbeat(int leaderID) {
-        synchronized (lock) {
-            setRole(RaftServerRole.FOLLOWER);
-            setLeaderID(leaderID);
-            // TODO: Need to check the logic of setting the vote as no vote yet.
-            //  My logic is that each server will only vote once during each term, so if the term is over,
-            //  which means it receives the heartbeat, then the vote should be reset as no vote.
-            setVotedFor(NO_VOTE);
-
-            // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
-            if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
-                electionScheduledFuture.cancel(true);
-                resetElectionTimer();
-            }
-        }
      }
 
      public void sendHeartbeats() {
@@ -219,9 +220,15 @@ public class RaftServer {
          }
      }
 
-     public void onReceiveAppendResponse(RaftProto.AppendResponse response) {
-         LOG.info("Server {} receives append response: term = {}, appendSuccess = {}",
+     public void onSenderReceiveAppendResponse(RaftProto.AppendResponse response) {
+         LOG.info("Server {} sender receives append response: term = {}, appendSuccess = {}",
                  this.serverID, response.getTerm(), response.getSuccess());
+         synchronized (lock) {
+             if (response.getTerm() > currentTerm) {
+                 currentTerm = response.getTerm();
+                 setRole(RaftServerRole.FOLLOWER);
+             }
+         }
      }
 
 
@@ -238,9 +245,10 @@ public class RaftServer {
      * */
      private void beginElection() {
          synchronized (lock) {
-             setRole(RaftServerRole.CANDIDATE);
              incrementTerm();
+             setRole(RaftServerRole.CANDIDATE);
              setVotedFor(serverID);
+             votesReceived = 0;
          }
          resetElectionTimer();
          requestVote(currentTerm, serverID, 0, 0);
@@ -257,4 +265,22 @@ public class RaftServer {
          return (int) period;
      }
 
+
+    public void onReceiverReceiveHeartbeat(int leaderID) {
+        synchronized (lock) {
+            setLeaderID(leaderID);
+
+//            setVotedFor(NO_VOTE);
+
+            // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
+            if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
+                electionScheduledFuture.cancel(true);
+                resetElectionTimer();
+            }
+        }
+    }
+
+    public void onReceiverReceiveAppendRequest() {
+
+    }
 }

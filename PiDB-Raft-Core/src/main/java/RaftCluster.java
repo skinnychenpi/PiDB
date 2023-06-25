@@ -26,6 +26,8 @@ public class RaftCluster {
 
 //        ExecutorService executor = Executors.newFixedThreadPool(3);
 
+        System.out.println("HELLO FROM Meituan!");
+
         try {
             server1.start();
             server2.start();

@@ -1,1 +1,4 @@
-/PiDB-Raft-Core/log/raft.log
+*.log
+target/
+*.class
+.idea

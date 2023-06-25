@@ -122,15 +122,15 @@ public class RaftServer {
 //        receiver.blockUntilShutdown();
     }
 
-    public synchronized int getCurrentTerm() {
+    public int getCurrentTerm() {
         return currentTerm;
     }
 
-    public synchronized void setCurrentTerm(int currentTerm) {
+    public void setCurrentTerm(int currentTerm) {
         this.currentTerm = currentTerm;
     }
 
-    public synchronized int getCommitIndex() {
+    public int getCommitIndex() {
         return commitIndex;
     }
 
@@ -143,11 +143,11 @@ public class RaftServer {
         LOG.info("Server {} set role to {} at term {}", serverID, role, currentTerm);
     }
 
-    public synchronized void incrementTerm() {
+    public void incrementTerm() {
         this.currentTerm++;
     }
 
-    public synchronized void setLeaderID(int leaderID) {
+    public void setLeaderID(int leaderID) {
         this.leaderID = leaderID;
     }
 
@@ -267,16 +267,12 @@ public class RaftServer {
 
 
     public void onReceiverReceiveHeartbeat(int leaderID) {
-        synchronized (lock) {
-            setLeaderID(leaderID);
+        setLeaderID(leaderID);
 
-//            setVotedFor(NO_VOTE);
-
-            // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
-            if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
-                electionScheduledFuture.cancel(true);
-                resetElectionTimer();
-            }
+        // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
+        if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
+            electionScheduledFuture.cancel(true);
+            resetElectionTimer();
         }
     }
 

@@ -134,10 +134,10 @@ public class RaftMessageReceiver {
             RaftProto.AppendResponse.Builder builder = RaftProto.AppendResponse.newBuilder();
             List<RaftProto.Entry> entries = request.getEntriesList();
             int leaderTerm = request.getTerm();
-            int currentTerm = raftServer.getCurrentTerm();
             synchronized (raftServerSharedLock) {
-                if (leaderTerm < raftServer.getCurrentTerm()) {
-                    return builder.setSuccess(false).setTerm(raftServer.getCurrentTerm()).build();
+                int currentTerm = raftServer.getCurrentTerm();
+                if (leaderTerm < currentTerm) {
+                    return builder.setSuccess(false).setTerm(currentTerm).build();
                 }
                 // If RPC request or response contains term T > currentTerm, set currentTerm = T, convert to follower.
                 if (leaderTerm > currentTerm) {
@@ -145,22 +145,22 @@ public class RaftMessageReceiver {
                     raftServer.setRole(RaftServerRole.FOLLOWER);
                     raftServer.setVotedFor(RaftServer.NO_VOTE);
                 }
-            }
-            // If it is a heart beat:
-            if (entries.size() == 0) {
-                raftServer.onReceiverReceiveHeartbeat(request.getLeaderID());
+                // If it is a heart beat:
+                if (entries.size() == 0) {
+                    raftServer.onReceiverReceiveHeartbeat(request.getLeaderID());
+                    return RaftProto.AppendResponse.newBuilder()
+                            .setSuccess(true)
+                            .setTerm(currentTerm)
+                            .build();
+                }
+                // TODO: Currently the append entry receiving logic is not implemented, only the skeleton method is created.
+                // If it is not a heartbeat:
+                raftServer.onReceiverReceiveAppendRequest();
                 return RaftProto.AppendResponse.newBuilder()
-                        .setSuccess(true)
+                        .setSuccess(false)
                         .setTerm(currentTerm)
                         .build();
             }
-            // TODO: Currently the append entry receiving logic is not implemented, only the skeleton method is created.
-            // If it is not a heartbeat:
-            raftServer.onReceiverReceiveAppendRequest();
-            return RaftProto.AppendResponse.newBuilder()
-                    .setSuccess(false)
-                    .setTerm(currentTerm)
-                    .build();
         }
 
         @Override
@@ -176,8 +176,8 @@ public class RaftMessageReceiver {
             RaftProto.VoteResponse.Builder responseBuilder = RaftProto.VoteResponse.newBuilder();
             int candidateTerm = request.getTerm();
             int candidateID = request.getCandidateID();
-            int currentTerm = raftServer.getCurrentTerm();
             synchronized (raftServerSharedLock) {
+                int currentTerm = raftServer.getCurrentTerm();
                 if (candidateTerm >= currentTerm) {
                     // If RPC request or response contains term T > currentTerm, set currentTerm = T, convert to Follower.
                     if (candidateTerm > currentTerm) {
@@ -194,13 +194,13 @@ public class RaftMessageReceiver {
                         // TODO: Here the method getLastLogIndex() must be reimplemented!!!!!!
                         if (candidateTerm > currentTerm || (candidateTerm == currentTerm && request.getLastLogIndex() >= getLastLogIndex())) {
                             LOG.debug("Server {} currentTerm = {}, votedFor = {}, receives candidateTerm = {} from Server {}",
-                                    raftServer.getServerId(), raftServer.getCurrentTerm(), raftServer.getVotedFor(), candidateTerm, candidateID);
+                                    raftServer.getServerId(), currentTerm, raftServer.getVotedFor(), candidateTerm, candidateID);
                             return responseBuilder.setVoteGranted(true).setTerm(currentTerm).build();
                         }
                     }
                 }
+                return responseBuilder.setVoteGranted(false).setTerm(currentTerm).build();
             }
-            return responseBuilder.setVoteGranted(false).setTerm(currentTerm).build();
         }
     }
 }

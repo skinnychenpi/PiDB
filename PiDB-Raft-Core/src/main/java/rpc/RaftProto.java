@@ -185,6 +185,12 @@ public final class RaftProto {
      * <code>optional .google.protobuf.Any value = 3;</code>
      */
     com.google.protobuf.AnyOrBuilder getValueOrBuilder();
+
+    /**
+     * <code>int32 term = 4;</code>
+     * @return The term.
+     */
+    int getTerm();
   }
   /**
    * Protobuf type {@code raft.Entry}
@@ -305,6 +311,17 @@ public final class RaftProto {
       return value_ == null ? com.google.protobuf.Any.getDefaultInstance() : value_;
     }
 
+    public static final int TERM_FIELD_NUMBER = 4;
+    private int term_ = 0;
+    /**
+     * <code>int32 term = 4;</code>
+     * @return The term.
+     */
+    @java.lang.Override
+    public int getTerm() {
+      return term_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -328,6 +345,9 @@ public final class RaftProto {
       if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(3, getValue());
       }
+      if (term_ != 0) {
+        output.writeInt32(4, term_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -348,6 +368,10 @@ public final class RaftProto {
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(3, getValue());
+      }
+      if (term_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(4, term_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -375,6 +399,8 @@ public final class RaftProto {
         if (!getValue()
             .equals(other.getValue())) return false;
       }
+      if (getTerm()
+          != other.getTerm()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -396,6 +422,8 @@ public final class RaftProto {
         hash = (37 * hash) + VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getValue().hashCode();
       }
+      hash = (37 * hash) + TERM_FIELD_NUMBER;
+      hash = (53 * hash) + getTerm();
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -545,6 +573,7 @@ public final class RaftProto {
           valueBuilder_.dispose();
           valueBuilder_ = null;
         }
+        term_ = 0;
         return this;
       }
 
@@ -593,6 +622,9 @@ public final class RaftProto {
               : valueBuilder_.build();
           to_bitField0_ |= 0x00000001;
         }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.term_ = term_;
+        }
         result.bitField0_ |= to_bitField0_;
       }
 
@@ -616,6 +648,9 @@ public final class RaftProto {
         }
         if (other.hasValue()) {
           mergeValue(other.getValue());
+        }
+        if (other.getTerm() != 0) {
+          setTerm(other.getTerm());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -662,6 +697,11 @@ public final class RaftProto {
                 bitField0_ |= 0x00000004;
                 break;
               } // case 26
+              case 32: {
+                term_ = input.readInt32();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 32
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -1004,6 +1044,38 @@ public final class RaftProto {
           value_ = null;
         }
         return valueBuilder_;
+      }
+
+      private int term_ ;
+      /**
+       * <code>int32 term = 4;</code>
+       * @return The term.
+       */
+      @java.lang.Override
+      public int getTerm() {
+        return term_;
+      }
+      /**
+       * <code>int32 term = 4;</code>
+       * @param value The term to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTerm(int value) {
+
+        term_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>int32 term = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearTerm() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        term_ = 0;
+        onChanged();
+        return this;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -4310,23 +4382,23 @@ public final class RaftProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\rRaftRPC.proto\022\004raft\032\031google/protobuf/a" +
-      "ny.proto\"|\n\005Entry\022\034\n\006action\030\001 \001(\0162\014.raft" +
-      ".Action\022!\n\003key\030\002 \001(\0132\024.google.protobuf.A" +
-      "ny\022(\n\005value\030\003 \001(\0132\024.google.protobuf.AnyH" +
-      "\000\210\001\001B\010\n\006_value\"\216\001\n\rAppendRequest\022\014\n\004term" +
-      "\030\001 \001(\005\022\020\n\010leaderID\030\002 \001(\005\022\024\n\014prevLogIndex" +
-      "\030\003 \001(\003\022\023\n\013prevLogTerm\030\004 \001(\005\022\034\n\007entries\030\005" +
-      " \003(\0132\013.raft.Entry\022\024\n\014leaderCommit\030\006 \001(\005\"" +
-      "/\n\016AppendResponse\022\014\n\004term\030\001 \001(\005\022\017\n\007succe" +
-      "ss\030\002 \001(\010\"[\n\013VoteRequest\022\014\n\004term\030\001 \001(\005\022\023\n" +
-      "\013candidateID\030\002 \001(\005\022\024\n\014lastLogIndex\030\003 \001(\003" +
-      "\022\023\n\013lastLogTerm\030\004 \001(\005\"1\n\014VoteResponse\022\014\n" +
-      "\004term\030\001 \001(\005\022\023\n\013voteGranted\030\002 \001(\010*\032\n\006Acti" +
-      "on\022\007\n\003PUT\020\000\022\007\n\003GET\020\0012\177\n\007RaftRPC\022<\n\rappen" +
-      "dEntries\022\023.raft.AppendRequest\032\024.raft.App" +
-      "endResponse\"\000\0226\n\013requestVote\022\021.raft.Vote" +
-      "Request\032\022.raft.VoteResponse\"\000B\020\n\003rpcB\tRa" +
-      "ftProtob\006proto3"
+      "ny.proto\"\212\001\n\005Entry\022\034\n\006action\030\001 \001(\0162\014.raf" +
+      "t.Action\022!\n\003key\030\002 \001(\0132\024.google.protobuf." +
+      "Any\022(\n\005value\030\003 \001(\0132\024.google.protobuf.Any" +
+      "H\000\210\001\001\022\014\n\004term\030\004 \001(\005B\010\n\006_value\"\216\001\n\rAppend" +
+      "Request\022\014\n\004term\030\001 \001(\005\022\020\n\010leaderID\030\002 \001(\005\022" +
+      "\024\n\014prevLogIndex\030\003 \001(\003\022\023\n\013prevLogTerm\030\004 \001" +
+      "(\005\022\034\n\007entries\030\005 \003(\0132\013.raft.Entry\022\024\n\014lead" +
+      "erCommit\030\006 \001(\005\"/\n\016AppendResponse\022\014\n\004term" +
+      "\030\001 \001(\005\022\017\n\007success\030\002 \001(\010\"[\n\013VoteRequest\022\014" +
+      "\n\004term\030\001 \001(\005\022\023\n\013candidateID\030\002 \001(\005\022\024\n\014las" +
+      "tLogIndex\030\003 \001(\003\022\023\n\013lastLogTerm\030\004 \001(\005\"1\n\014" +
+      "VoteResponse\022\014\n\004term\030\001 \001(\005\022\023\n\013voteGrante" +
+      "d\030\002 \001(\010*\032\n\006Action\022\007\n\003PUT\020\000\022\007\n\003GET\020\0012\177\n\007R" +
+      "aftRPC\022<\n\rappendEntries\022\023.raft.AppendReq" +
+      "uest\032\024.raft.AppendResponse\"\000\0226\n\013requestV" +
+      "ote\022\021.raft.VoteRequest\032\022.raft.VoteRespon" +
+      "se\"\000B\020\n\003rpcB\tRaftProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -4338,7 +4410,7 @@ public final class RaftProto {
     internal_static_raft_Entry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_raft_Entry_descriptor,
-        new java.lang.String[] { "Action", "Key", "Value", "Value", });
+        new java.lang.String[] { "Action", "Key", "Value", "Term", "Value", });
     internal_static_raft_AppendRequest_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_raft_AppendRequest_fieldAccessorTable = new

@@ -30,6 +30,7 @@ message Entry {
   google.protobuf.Any key = 2;
   // If it's a get message, then no value should be attached.
   optional google.protobuf.Any value = 3;
+  int32 term = 4;
 }
 
 

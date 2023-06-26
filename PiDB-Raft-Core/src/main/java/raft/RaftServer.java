@@ -72,7 +72,11 @@ public class RaftServer {
 
     public static final int NO_VOTE = -1;
 
-    public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress) {
+    private final String LOG_DIR_PATH;
+
+    private final String ENTRY_LOG_FILE_NAME;
+
+    public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress, String logDirPath) {
         this.serverID = serverID;
         this.port = port;
         this.currentTerm = 0;
@@ -83,7 +87,6 @@ public class RaftServer {
         this.matchIndex = new HashMap<>();
         this.electionTimer = new Timer();
         this.role = RaftServerRole.FOLLOWER;
-        this.persistor = new RaftPersistor();
         this.isDead = false;
         this.lock = new Object();
         this.leaderID = -1;
@@ -113,6 +116,9 @@ public class RaftServer {
         scheduledExecutorService = Executors.newScheduledThreadPool(2);
         electionScheduledFuture = null;
 
+        LOG_DIR_PATH = logDirPath;
+        ENTRY_LOG_FILE_NAME = "Server" + serverID;
+        this.persistor = new RaftPersistor(LOG_DIR_PATH, ENTRY_LOG_FILE_NAME);
     }
 
     public void start() throws Exception {

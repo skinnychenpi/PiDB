@@ -145,46 +145,26 @@ public final class RaftProto {
     rpc.RaftProto.Action getAction();
 
     /**
-     * <code>.google.protobuf.Any key = 2;</code>
-     * @return Whether the key field is set.
-     */
-    boolean hasKey();
-    /**
-     * <code>.google.protobuf.Any key = 2;</code>
+     * <code>string key = 2;</code>
      * @return The key.
      */
-    com.google.protobuf.Any getKey();
+    java.lang.String getKey();
     /**
-     * <code>.google.protobuf.Any key = 2;</code>
+     * <code>string key = 2;</code>
+     * @return The bytes for key.
      */
-    com.google.protobuf.AnyOrBuilder getKeyOrBuilder();
+    com.google.protobuf.ByteString
+        getKeyBytes();
 
     /**
      * <pre>
      * If it's a get message, then no value should be attached.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 3;</code>
-     * @return Whether the value field is set.
-     */
-    boolean hasValue();
-    /**
-     * <pre>
-     * If it's a get message, then no value should be attached.
-     * </pre>
-     *
-     * <code>optional .google.protobuf.Any value = 3;</code>
+     * <code>int32 value = 3;</code>
      * @return The value.
      */
-    com.google.protobuf.Any getValue();
-    /**
-     * <pre>
-     * If it's a get message, then no value should be attached.
-     * </pre>
-     *
-     * <code>optional .google.protobuf.Any value = 3;</code>
-     */
-    com.google.protobuf.AnyOrBuilder getValueOrBuilder();
+    int getValue();
 
     /**
      * <code>int32 term = 4;</code>
@@ -206,6 +186,7 @@ public final class RaftProto {
     }
     private Entry() {
       action_ = 0;
+      key_ = "";
     }
 
     @java.lang.Override
@@ -228,7 +209,6 @@ public final class RaftProto {
               rpc.RaftProto.Entry.class, rpc.RaftProto.Entry.Builder.class);
     }
 
-    private int bitField0_;
     public static final int ACTION_FIELD_NUMBER = 1;
     private int action_ = 0;
     /**
@@ -248,67 +228,57 @@ public final class RaftProto {
     }
 
     public static final int KEY_FIELD_NUMBER = 2;
-    private com.google.protobuf.Any key_;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object key_ = "";
     /**
-     * <code>.google.protobuf.Any key = 2;</code>
-     * @return Whether the key field is set.
-     */
-    @java.lang.Override
-    public boolean hasKey() {
-      return key_ != null;
-    }
-    /**
-     * <code>.google.protobuf.Any key = 2;</code>
+     * <code>string key = 2;</code>
      * @return The key.
      */
     @java.lang.Override
-    public com.google.protobuf.Any getKey() {
-      return key_ == null ? com.google.protobuf.Any.getDefaultInstance() : key_;
+    public java.lang.String getKey() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        key_ = s;
+        return s;
+      }
     }
     /**
-     * <code>.google.protobuf.Any key = 2;</code>
+     * <code>string key = 2;</code>
+     * @return The bytes for key.
      */
     @java.lang.Override
-    public com.google.protobuf.AnyOrBuilder getKeyOrBuilder() {
-      return key_ == null ? com.google.protobuf.Any.getDefaultInstance() : key_;
+    public com.google.protobuf.ByteString
+        getKeyBytes() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        key_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
     }
 
     public static final int VALUE_FIELD_NUMBER = 3;
-    private com.google.protobuf.Any value_;
+    private int value_ = 0;
     /**
      * <pre>
      * If it's a get message, then no value should be attached.
      * </pre>
      *
-     * <code>optional .google.protobuf.Any value = 3;</code>
-     * @return Whether the value field is set.
-     */
-    @java.lang.Override
-    public boolean hasValue() {
-      return ((bitField0_ & 0x00000001) != 0);
-    }
-    /**
-     * <pre>
-     * If it's a get message, then no value should be attached.
-     * </pre>
-     *
-     * <code>optional .google.protobuf.Any value = 3;</code>
+     * <code>int32 value = 3;</code>
      * @return The value.
      */
     @java.lang.Override
-    public com.google.protobuf.Any getValue() {
-      return value_ == null ? com.google.protobuf.Any.getDefaultInstance() : value_;
-    }
-    /**
-     * <pre>
-     * If it's a get message, then no value should be attached.
-     * </pre>
-     *
-     * <code>optional .google.protobuf.Any value = 3;</code>
-     */
-    @java.lang.Override
-    public com.google.protobuf.AnyOrBuilder getValueOrBuilder() {
-      return value_ == null ? com.google.protobuf.Any.getDefaultInstance() : value_;
+    public int getValue() {
+      return value_;
     }
 
     public static final int TERM_FIELD_NUMBER = 4;
@@ -339,11 +309,11 @@ public final class RaftProto {
       if (action_ != rpc.RaftProto.Action.PUT.getNumber()) {
         output.writeEnum(1, action_);
       }
-      if (key_ != null) {
-        output.writeMessage(2, getKey());
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(key_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, key_);
       }
-      if (((bitField0_ & 0x00000001) != 0)) {
-        output.writeMessage(3, getValue());
+      if (value_ != 0) {
+        output.writeInt32(3, value_);
       }
       if (term_ != 0) {
         output.writeInt32(4, term_);
@@ -361,13 +331,12 @@ public final class RaftProto {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(1, action_);
       }
-      if (key_ != null) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getKey());
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(key_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, key_);
       }
-      if (((bitField0_ & 0x00000001) != 0)) {
+      if (value_ != 0) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getValue());
+          .computeInt32Size(3, value_);
       }
       if (term_ != 0) {
         size += com.google.protobuf.CodedOutputStream
@@ -389,16 +358,10 @@ public final class RaftProto {
       rpc.RaftProto.Entry other = (rpc.RaftProto.Entry) obj;
 
       if (action_ != other.action_) return false;
-      if (hasKey() != other.hasKey()) return false;
-      if (hasKey()) {
-        if (!getKey()
-            .equals(other.getKey())) return false;
-      }
-      if (hasValue() != other.hasValue()) return false;
-      if (hasValue()) {
-        if (!getValue()
-            .equals(other.getValue())) return false;
-      }
+      if (!getKey()
+          .equals(other.getKey())) return false;
+      if (getValue()
+          != other.getValue()) return false;
       if (getTerm()
           != other.getTerm()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -414,14 +377,10 @@ public final class RaftProto {
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + ACTION_FIELD_NUMBER;
       hash = (53 * hash) + action_;
-      if (hasKey()) {
-        hash = (37 * hash) + KEY_FIELD_NUMBER;
-        hash = (53 * hash) + getKey().hashCode();
-      }
-      if (hasValue()) {
-        hash = (37 * hash) + VALUE_FIELD_NUMBER;
-        hash = (53 * hash) + getValue().hashCode();
-      }
+      hash = (37 * hash) + KEY_FIELD_NUMBER;
+      hash = (53 * hash) + getKey().hashCode();
+      hash = (37 * hash) + VALUE_FIELD_NUMBER;
+      hash = (53 * hash) + getValue();
       hash = (37 * hash) + TERM_FIELD_NUMBER;
       hash = (53 * hash) + getTerm();
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -543,36 +502,21 @@ public final class RaftProto {
 
       // Construct using rpc.RaftProto.Entry.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-          getKeyFieldBuilder();
-          getValueFieldBuilder();
-        }
+
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
         action_ = 0;
-        key_ = null;
-        if (keyBuilder_ != null) {
-          keyBuilder_.dispose();
-          keyBuilder_ = null;
-        }
-        value_ = null;
-        if (valueBuilder_ != null) {
-          valueBuilder_.dispose();
-          valueBuilder_ = null;
-        }
+        key_ = "";
+        value_ = 0;
         term_ = 0;
         return this;
       }
@@ -611,21 +555,14 @@ public final class RaftProto {
           result.action_ = action_;
         }
         if (((from_bitField0_ & 0x00000002) != 0)) {
-          result.key_ = keyBuilder_ == null
-              ? key_
-              : keyBuilder_.build();
+          result.key_ = key_;
         }
-        int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000004) != 0)) {
-          result.value_ = valueBuilder_ == null
-              ? value_
-              : valueBuilder_.build();
-          to_bitField0_ |= 0x00000001;
+          result.value_ = value_;
         }
         if (((from_bitField0_ & 0x00000008) != 0)) {
           result.term_ = term_;
         }
-        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -643,11 +580,13 @@ public final class RaftProto {
         if (other.action_ != 0) {
           setActionValue(other.getActionValue());
         }
-        if (other.hasKey()) {
-          mergeKey(other.getKey());
+        if (!other.getKey().isEmpty()) {
+          key_ = other.key_;
+          bitField0_ |= 0x00000002;
+          onChanged();
         }
-        if (other.hasValue()) {
-          mergeValue(other.getValue());
+        if (other.getValue() != 0) {
+          setValue(other.getValue());
         }
         if (other.getTerm() != 0) {
           setTerm(other.getTerm());
@@ -684,19 +623,15 @@ public final class RaftProto {
                 break;
               } // case 8
               case 18: {
-                input.readMessage(
-                    getKeyFieldBuilder().getBuilder(),
-                    extensionRegistry);
+                key_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
                 break;
               } // case 18
-              case 26: {
-                input.readMessage(
-                    getValueFieldBuilder().getBuilder(),
-                    extensionRegistry);
+              case 24: {
+                value_ = input.readInt32();
                 bitField0_ |= 0x00000004;
                 break;
-              } // case 26
+              } // case 24
               case 32: {
                 term_ = input.readInt32();
                 bitField0_ |= 0x00000008;
@@ -772,170 +707,103 @@ public final class RaftProto {
         return this;
       }
 
-      private com.google.protobuf.Any key_;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.protobuf.Any, com.google.protobuf.Any.Builder, com.google.protobuf.AnyOrBuilder> keyBuilder_;
+      private java.lang.Object key_ = "";
       /**
-       * <code>.google.protobuf.Any key = 2;</code>
-       * @return Whether the key field is set.
-       */
-      public boolean hasKey() {
-        return ((bitField0_ & 0x00000002) != 0);
-      }
-      /**
-       * <code>.google.protobuf.Any key = 2;</code>
+       * <code>string key = 2;</code>
        * @return The key.
        */
-      public com.google.protobuf.Any getKey() {
-        if (keyBuilder_ == null) {
-          return key_ == null ? com.google.protobuf.Any.getDefaultInstance() : key_;
+      public java.lang.String getKey() {
+        java.lang.Object ref = key_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          key_ = s;
+          return s;
         } else {
-          return keyBuilder_.getMessage();
+          return (java.lang.String) ref;
         }
       }
       /**
-       * <code>.google.protobuf.Any key = 2;</code>
+       * <code>string key = 2;</code>
+       * @return The bytes for key.
        */
-      public Builder setKey(com.google.protobuf.Any value) {
-        if (keyBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          key_ = value;
+      public com.google.protobuf.ByteString
+          getKeyBytes() {
+        java.lang.Object ref = key_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          key_ = b;
+          return b;
         } else {
-          keyBuilder_.setMessage(value);
+          return (com.google.protobuf.ByteString) ref;
         }
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return this;
       }
       /**
-       * <code>.google.protobuf.Any key = 2;</code>
+       * <code>string key = 2;</code>
+       * @param value The key to set.
+       * @return This builder for chaining.
        */
       public Builder setKey(
-          com.google.protobuf.Any.Builder builderForValue) {
-        if (keyBuilder_ == null) {
-          key_ = builderForValue.build();
-        } else {
-          keyBuilder_.setMessage(builderForValue.build());
-        }
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        key_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
       /**
-       * <code>.google.protobuf.Any key = 2;</code>
-       */
-      public Builder mergeKey(com.google.protobuf.Any value) {
-        if (keyBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) != 0) &&
-            key_ != null &&
-            key_ != com.google.protobuf.Any.getDefaultInstance()) {
-            getKeyBuilder().mergeFrom(value);
-          } else {
-            key_ = value;
-          }
-        } else {
-          keyBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>.google.protobuf.Any key = 2;</code>
+       * <code>string key = 2;</code>
+       * @return This builder for chaining.
        */
       public Builder clearKey() {
+        key_ = getDefaultInstance().getKey();
         bitField0_ = (bitField0_ & ~0x00000002);
-        key_ = null;
-        if (keyBuilder_ != null) {
-          keyBuilder_.dispose();
-          keyBuilder_ = null;
-        }
         onChanged();
         return this;
       }
       /**
-       * <code>.google.protobuf.Any key = 2;</code>
+       * <code>string key = 2;</code>
+       * @param value The bytes for key to set.
+       * @return This builder for chaining.
        */
-      public com.google.protobuf.Any.Builder getKeyBuilder() {
+      public Builder setKeyBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        key_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
-        return getKeyFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>.google.protobuf.Any key = 2;</code>
-       */
-      public com.google.protobuf.AnyOrBuilder getKeyOrBuilder() {
-        if (keyBuilder_ != null) {
-          return keyBuilder_.getMessageOrBuilder();
-        } else {
-          return key_ == null ?
-              com.google.protobuf.Any.getDefaultInstance() : key_;
-        }
-      }
-      /**
-       * <code>.google.protobuf.Any key = 2;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.protobuf.Any, com.google.protobuf.Any.Builder, com.google.protobuf.AnyOrBuilder> 
-          getKeyFieldBuilder() {
-        if (keyBuilder_ == null) {
-          keyBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              com.google.protobuf.Any, com.google.protobuf.Any.Builder, com.google.protobuf.AnyOrBuilder>(
-                  getKey(),
-                  getParentForChildren(),
-                  isClean());
-          key_ = null;
-        }
-        return keyBuilder_;
+        return this;
       }
 
-      private com.google.protobuf.Any value_;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.protobuf.Any, com.google.protobuf.Any.Builder, com.google.protobuf.AnyOrBuilder> valueBuilder_;
+      private int value_ ;
       /**
        * <pre>
        * If it's a get message, then no value should be attached.
        * </pre>
        *
-       * <code>optional .google.protobuf.Any value = 3;</code>
-       * @return Whether the value field is set.
-       */
-      public boolean hasValue() {
-        return ((bitField0_ & 0x00000004) != 0);
-      }
-      /**
-       * <pre>
-       * If it's a get message, then no value should be attached.
-       * </pre>
-       *
-       * <code>optional .google.protobuf.Any value = 3;</code>
+       * <code>int32 value = 3;</code>
        * @return The value.
        */
-      public com.google.protobuf.Any getValue() {
-        if (valueBuilder_ == null) {
-          return value_ == null ? com.google.protobuf.Any.getDefaultInstance() : value_;
-        } else {
-          return valueBuilder_.getMessage();
-        }
+      @java.lang.Override
+      public int getValue() {
+        return value_;
       }
       /**
        * <pre>
        * If it's a get message, then no value should be attached.
        * </pre>
        *
-       * <code>optional .google.protobuf.Any value = 3;</code>
+       * <code>int32 value = 3;</code>
+       * @param value The value to set.
+       * @return This builder for chaining.
        */
-      public Builder setValue(com.google.protobuf.Any value) {
-        if (valueBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          value_ = value;
-        } else {
-          valueBuilder_.setMessage(value);
-        }
+      public Builder setValue(int value) {
+
+        value_ = value;
         bitField0_ |= 0x00000004;
         onChanged();
         return this;
@@ -945,105 +813,14 @@ public final class RaftProto {
        * If it's a get message, then no value should be attached.
        * </pre>
        *
-       * <code>optional .google.protobuf.Any value = 3;</code>
-       */
-      public Builder setValue(
-          com.google.protobuf.Any.Builder builderForValue) {
-        if (valueBuilder_ == null) {
-          value_ = builderForValue.build();
-        } else {
-          valueBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000004;
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * If it's a get message, then no value should be attached.
-       * </pre>
-       *
-       * <code>optional .google.protobuf.Any value = 3;</code>
-       */
-      public Builder mergeValue(com.google.protobuf.Any value) {
-        if (valueBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) != 0) &&
-            value_ != null &&
-            value_ != com.google.protobuf.Any.getDefaultInstance()) {
-            getValueBuilder().mergeFrom(value);
-          } else {
-            value_ = value;
-          }
-        } else {
-          valueBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000004;
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * If it's a get message, then no value should be attached.
-       * </pre>
-       *
-       * <code>optional .google.protobuf.Any value = 3;</code>
+       * <code>int32 value = 3;</code>
+       * @return This builder for chaining.
        */
       public Builder clearValue() {
         bitField0_ = (bitField0_ & ~0x00000004);
-        value_ = null;
-        if (valueBuilder_ != null) {
-          valueBuilder_.dispose();
-          valueBuilder_ = null;
-        }
+        value_ = 0;
         onChanged();
         return this;
-      }
-      /**
-       * <pre>
-       * If it's a get message, then no value should be attached.
-       * </pre>
-       *
-       * <code>optional .google.protobuf.Any value = 3;</code>
-       */
-      public com.google.protobuf.Any.Builder getValueBuilder() {
-        bitField0_ |= 0x00000004;
-        onChanged();
-        return getValueFieldBuilder().getBuilder();
-      }
-      /**
-       * <pre>
-       * If it's a get message, then no value should be attached.
-       * </pre>
-       *
-       * <code>optional .google.protobuf.Any value = 3;</code>
-       */
-      public com.google.protobuf.AnyOrBuilder getValueOrBuilder() {
-        if (valueBuilder_ != null) {
-          return valueBuilder_.getMessageOrBuilder();
-        } else {
-          return value_ == null ?
-              com.google.protobuf.Any.getDefaultInstance() : value_;
-        }
-      }
-      /**
-       * <pre>
-       * If it's a get message, then no value should be attached.
-       * </pre>
-       *
-       * <code>optional .google.protobuf.Any value = 3;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.google.protobuf.Any, com.google.protobuf.Any.Builder, com.google.protobuf.AnyOrBuilder> 
-          getValueFieldBuilder() {
-        if (valueBuilder_ == null) {
-          valueBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              com.google.protobuf.Any, com.google.protobuf.Any.Builder, com.google.protobuf.AnyOrBuilder>(
-                  getValue(),
-                  getParentForChildren(),
-                  isClean());
-          value_ = null;
-        }
-        return valueBuilder_;
       }
 
       private int term_ ;
@@ -4382,23 +4159,22 @@ public final class RaftProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\rRaftRPC.proto\022\004raft\032\031google/protobuf/a" +
-      "ny.proto\"\212\001\n\005Entry\022\034\n\006action\030\001 \001(\0162\014.raf" +
-      "t.Action\022!\n\003key\030\002 \001(\0132\024.google.protobuf." +
-      "Any\022(\n\005value\030\003 \001(\0132\024.google.protobuf.Any" +
-      "H\000\210\001\001\022\014\n\004term\030\004 \001(\005B\010\n\006_value\"\216\001\n\rAppend" +
-      "Request\022\014\n\004term\030\001 \001(\005\022\020\n\010leaderID\030\002 \001(\005\022" +
-      "\024\n\014prevLogIndex\030\003 \001(\003\022\023\n\013prevLogTerm\030\004 \001" +
-      "(\005\022\034\n\007entries\030\005 \003(\0132\013.raft.Entry\022\024\n\014lead" +
-      "erCommit\030\006 \001(\005\"/\n\016AppendResponse\022\014\n\004term" +
-      "\030\001 \001(\005\022\017\n\007success\030\002 \001(\010\"[\n\013VoteRequest\022\014" +
-      "\n\004term\030\001 \001(\005\022\023\n\013candidateID\030\002 \001(\005\022\024\n\014las" +
-      "tLogIndex\030\003 \001(\003\022\023\n\013lastLogTerm\030\004 \001(\005\"1\n\014" +
-      "VoteResponse\022\014\n\004term\030\001 \001(\005\022\023\n\013voteGrante" +
-      "d\030\002 \001(\010*\032\n\006Action\022\007\n\003PUT\020\000\022\007\n\003GET\020\0012\177\n\007R" +
-      "aftRPC\022<\n\rappendEntries\022\023.raft.AppendReq" +
-      "uest\032\024.raft.AppendResponse\"\000\0226\n\013requestV" +
-      "ote\022\021.raft.VoteRequest\032\022.raft.VoteRespon" +
-      "se\"\000B\020\n\003rpcB\tRaftProtob\006proto3"
+      "ny.proto\"O\n\005Entry\022\034\n\006action\030\001 \001(\0162\014.raft" +
+      ".Action\022\013\n\003key\030\002 \001(\t\022\r\n\005value\030\003 \001(\005\022\014\n\004t" +
+      "erm\030\004 \001(\005\"\216\001\n\rAppendRequest\022\014\n\004term\030\001 \001(" +
+      "\005\022\020\n\010leaderID\030\002 \001(\005\022\024\n\014prevLogIndex\030\003 \001(" +
+      "\003\022\023\n\013prevLogTerm\030\004 \001(\005\022\034\n\007entries\030\005 \003(\0132" +
+      "\013.raft.Entry\022\024\n\014leaderCommit\030\006 \001(\005\"/\n\016Ap" +
+      "pendResponse\022\014\n\004term\030\001 \001(\005\022\017\n\007success\030\002 " +
+      "\001(\010\"[\n\013VoteRequest\022\014\n\004term\030\001 \001(\005\022\023\n\013cand" +
+      "idateID\030\002 \001(\005\022\024\n\014lastLogIndex\030\003 \001(\003\022\023\n\013l" +
+      "astLogTerm\030\004 \001(\005\"1\n\014VoteResponse\022\014\n\004term" +
+      "\030\001 \001(\005\022\023\n\013voteGranted\030\002 \001(\010*\032\n\006Action\022\007\n" +
+      "\003PUT\020\000\022\007\n\003GET\020\0012\177\n\007RaftRPC\022<\n\rappendEntr" +
+      "ies\022\023.raft.AppendRequest\032\024.raft.AppendRe" +
+      "sponse\"\000\0226\n\013requestVote\022\021.raft.VoteReque" +
+      "st\032\022.raft.VoteResponse\"\000B\020\n\003rpcB\tRaftPro" +
+      "tob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -4410,7 +4186,7 @@ public final class RaftProto {
     internal_static_raft_Entry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_raft_Entry_descriptor,
-        new java.lang.String[] { "Action", "Key", "Value", "Term", "Value", });
+        new java.lang.String[] { "Action", "Key", "Value", "Term", });
     internal_static_raft_AppendRequest_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_raft_AppendRequest_fieldAccessorTable = new

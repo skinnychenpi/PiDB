@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import raft.storage.LogEntry;
 import raft.storage.Persistor;
 import raft.storage.RaftPersistor;
 import rpc.RaftProto;
@@ -52,6 +53,8 @@ public class RaftServer {
 
     private Map<Integer, Integer> matchIndex;
 
+    private List<LogEntry> logEntries;
+
     private Timer electionTimer;
 
     private RaftServerRole role;
@@ -72,7 +75,13 @@ public class RaftServer {
 
     public static final int NO_VOTE = -1;
 
-    public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress) {
+    public static final int NO_LEADER = -1;
+
+    private final String LOG_DIR_PATH;
+
+    private final String ENTRY_LOG_FILE_NAME;
+
+    public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress, String logDirPath) {
         this.serverID = serverID;
         this.port = port;
         this.currentTerm = 0;
@@ -83,10 +92,9 @@ public class RaftServer {
         this.matchIndex = new HashMap<>();
         this.electionTimer = new Timer();
         this.role = RaftServerRole.FOLLOWER;
-        this.persistor = new RaftPersistor();
         this.isDead = false;
         this.lock = new Object();
-        this.leaderID = -1;
+        this.leaderID = NO_LEADER;
 
         // Start the sender and receiver here.
         /**
@@ -113,13 +121,29 @@ public class RaftServer {
         scheduledExecutorService = Executors.newScheduledThreadPool(2);
         electionScheduledFuture = null;
 
+        LOG_DIR_PATH = logDirPath;
+        ENTRY_LOG_FILE_NAME = "Server" + serverID;
+        this.persistor = new RaftPersistor(LOG_DIR_PATH, ENTRY_LOG_FILE_NAME);
     }
 
     public void start() throws Exception {
         LOG.info("Server {} start...", serverID);
-        System.out.println("Server starts.");
+
+        // Initializing log.
+        LOG.info("Server {} initializing log...", serverID);
+        this.logEntries = persistor.read();
+
+        // Start Server and reset timer for next election.
         receiver.start();
+        resetElectionTimer();
+        LOG.info("Server {} starts.", serverID);
+        System.out.println("Server starts.");
 //        receiver.blockUntilShutdown();
+    }
+
+    public void stop() throws Exception {
+        receiver.stop();
+        LOG.info("Server {} stops.", serverID);
     }
 
     public int getCurrentTerm() {

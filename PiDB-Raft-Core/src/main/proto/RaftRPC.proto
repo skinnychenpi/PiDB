@@ -27,9 +27,9 @@ enum Action {
 
 message Entry {
   Action action = 1;
-  google.protobuf.Any key = 2;
+  string key = 2;
   // If it's a get message, then no value should be attached.
-  optional google.protobuf.Any value = 3;
+  int32 value = 3;
   int32 term = 4;
 }
 

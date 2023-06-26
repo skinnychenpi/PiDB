@@ -2,4 +2,4 @@
 target/
 *.class
 .idea
-PiDB-Raft-Core/target
+.DS_Store

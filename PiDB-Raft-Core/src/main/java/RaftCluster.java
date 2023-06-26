@@ -15,7 +15,7 @@ import rpc.RaftProto;
 
 public class RaftCluster {
     public static void main(String[] args) {
-
+        // TODO: For LOG_DIR_PATH and Conf path should be store in a config file, this is only for current development.
         File conf = new File("/Users/chenyuheng/Desktop/PiDB/PiDB-Raft-Core/src/main/conf/log4j.properties");
         PropertyConfigurator.configure(conf.getAbsolutePath());
         String LOG_DIR_PATH = "/Users/chenyuheng/Desktop/PiDB/PiDB-Raft-Core/log";
@@ -26,9 +26,9 @@ public class RaftCluster {
         serverAddressMap.put(2, new RaftServerAddress(LOCAL_HOST, 7071));
         serverAddressMap.put(3, new RaftServerAddress(LOCAL_HOST, 7072));
 
-        RaftServer server1 = new RaftServer(1, "localhost", 7070, serverAddressMap, LOG_DIR_PATH);
-        RaftServer server2 = new RaftServer(2, "localhost", 7071, serverAddressMap, LOG_DIR_PATH);
-        RaftServer server3 = new RaftServer(3, "localhost", 7072, serverAddressMap, LOG_DIR_PATH);
+        RaftServer server1 = new RaftServer(1, LOCAL_HOST, 7070, serverAddressMap, LOG_DIR_PATH);
+        RaftServer server2 = new RaftServer(2, LOCAL_HOST, 7071, serverAddressMap, LOG_DIR_PATH);
+        RaftServer server3 = new RaftServer(3, LOCAL_HOST, 7072, serverAddressMap, LOG_DIR_PATH);
 
 //        ExecutorService executor = Executors.newFixedThreadPool(3);
 
@@ -41,24 +41,17 @@ public class RaftCluster {
             e.printStackTrace();
         }
 
-        try {
-            server1.resetElectionTimer();
-            server2.resetElectionTimer();
-            server3.resetElectionTimer();
-        } catch (Exception e) {
-            System.out.println("Error at start voting...");
-            e.printStackTrace();
-        }
-        String PATH = "/Users/chenyuheng/Desktop/PiDB/PiDB-Raft-Core/log";
-        RandomAccessFile file = RaftFileUtils.openFile(PATH, "S1","rw");
-        RaftProto.Entry entry = new LogEntry(LogAction.PUT, "asdf", 1,1).getEntry();
-        RaftFileUtils.writeProtoToFile(file, entry);
-        RaftFileUtils.closeFile(file);
-
-        RandomAccessFile file1 = RaftFileUtils.openFile(PATH, "S1","r");
-        RaftProto.Entry entry1 = RaftFileUtils.readProtoFromFile(file1, RaftProto.Entry.class);
-        System.out.println(entry1);
-        RaftFileUtils.closeFile(file1);
+        // Experiment for log storage.
+//        String PATH = "/Users/chenyuheng/Desktop/PiDB/PiDB-Raft-Core/log";
+//        RandomAccessFile file = RaftFileUtils.openFile(PATH, "S1","rw");
+//        RaftProto.Entry entry = new LogEntry(LogAction.PUT, "asdf", 1,1).getEntry();
+//        RaftFileUtils.writeProtoToFile(file, entry);
+//        RaftFileUtils.closeFile(file);
+//
+//        RandomAccessFile file1 = RaftFileUtils.openFile(PATH, "S1","r");
+//        RaftProto.Entry entry1 = RaftFileUtils.readProtoFromFile(file1, RaftProto.Entry.class);
+//        System.out.println(entry1);
+//        RaftFileUtils.closeFile(file1);
 
     }
 }

@@ -5,7 +5,7 @@ import rpc.RaftProto;
 
 import java.util.List;
 
-public interface Persistor <T extends Message>  {
+public interface Persistor<T extends Message>  {
     void persist(List<T> entries);
 
     void persist(T entry);

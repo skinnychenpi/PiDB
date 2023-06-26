@@ -1,2 +1,2 @@
 # PiDB
-PiDB is a Java implemented memory KV store DB.
+PiDB is raft-based, Java implemented distributed memory KV store DB.

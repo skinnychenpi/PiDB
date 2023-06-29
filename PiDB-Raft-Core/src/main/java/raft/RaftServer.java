@@ -160,7 +160,7 @@ public class RaftServer {
 
     private void loadLogMeta() {
         // Load commit Index
-        for (int i = logEntries.size(); i >= 0; i--) {
+        for (int i = logEntries.size(); i >= 1; i--) {
             RaftProto.Entry entry = logEntries.get(i - 1);
             if (entry.getIsCommitted() && i > commitIndex) {
                 commitIndex = i;

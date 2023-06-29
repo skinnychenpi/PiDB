@@ -46,11 +46,13 @@ public class RaftMetaPersistor implements Persistor<RaftProto.MetaData> {
     }
 
     public int getCurrentTerm() {
-        return read().get(0).getCurrentTerm();
+        List<RaftProto.MetaData> metaDataList = read();
+        return metaDataList.isEmpty() ? 0 : read().get(0).getCurrentTerm();
     }
 
     public int getVotedFor() {
-        return read().get(0).getVotedFor();
+        List<RaftProto.MetaData> metaDataList = read();
+        return metaDataList.isEmpty() ? 0 : read().get(0).getVotedFor();
     }
 
     @Override

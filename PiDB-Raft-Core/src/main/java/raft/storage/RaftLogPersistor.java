@@ -1,6 +1,5 @@
 package raft.storage;
 
-import com.google.protobuf.Message;
 import rpc.RaftProto;
 
 import java.io.RandomAccessFile;
@@ -8,18 +7,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Raft Persistor will persist the Raft node log entries on the disk.
+ * Raft Log Persistor will persist the Raft node log entries on the disk.
  * It's an important infrastructure for log replication.
  * */
-public class RaftPersistor implements Persistor<RaftProto.Entry> {
+public class RaftLogPersistor implements Persistor<RaftProto.Entry> {
     private final String LOG_DIR_PATH;
     private final String FILE_NAME;
     private final RandomAccessFile RAF;
+    private long lastLogIndex;
+    private long lastLogTerm;
 
-    public RaftPersistor(String logDirPath, String fileName) {
+    public RaftLogPersistor(String logDirPath, String fileName) {
         this.LOG_DIR_PATH = logDirPath;
         this.FILE_NAME = fileName;
         this.RAF = RaftFileUtils.openFile(LOG_DIR_PATH, FILE_NAME, "rw");
+        this.lastLogIndex = 0L;
+        this.lastLogTerm = 0L;
     }
 
     @Override
@@ -45,8 +48,8 @@ public class RaftPersistor implements Persistor<RaftProto.Entry> {
         }
         return logEntries;
     }
-
-    public void onExit() {
+    @Override
+    public void stop() {
         RaftFileUtils.closeFile(RAF);
     }
 }

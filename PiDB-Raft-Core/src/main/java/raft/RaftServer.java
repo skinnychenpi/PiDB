@@ -10,8 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import raft.storage.LogEntry;
-import raft.storage.Persistor;
-import raft.storage.RaftPersistor;
+import raft.storage.LogMetaData;
+import raft.storage.RaftLogPersistor;
+import raft.storage.RaftMetaPersistor;
 import rpc.RaftProto;
 
 /**
@@ -45,21 +46,23 @@ public class RaftServer {
      * */
     private int votedFor;
 
-    private int commitIndex;
+    private long commitIndex;
 
-    private int lastApplied;
+    private long lastApplied;
 
-    private Map<Integer, Integer> nextIndex;
+    private List<RaftProto.Entry> logEntries;
 
-    private Map<Integer, Integer> matchIndex;
+    private Map<Integer, Long> nextIndex;
 
-    private List<LogEntry> logEntries;
+    private Map<Integer, Long> matchIndex;
 
     private Timer electionTimer;
 
     private RaftServerRole role;
 
-    private Persistor persistor;
+    private final RaftLogPersistor raftLogPersistor;
+
+    private final RaftMetaPersistor raftLogMetaPersistor;
 
     private static final Logger LOG = LoggerFactory.getLogger(RaftServer.class);
 
@@ -81,15 +84,20 @@ public class RaftServer {
 
     private final String ENTRY_LOG_FILE_NAME;
 
+    private final String LOG_META_FILE_NAME;
+
+    //TODO: Not quite sure log index is necessary or not !!!!!!!!
+    private long logIndex;
+
     public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress, String logDirPath) {
         this.serverID = serverID;
         this.port = port;
         this.currentTerm = 0;
         this.votedFor = NO_VOTE;
-        this.commitIndex = 0;
-        this.lastApplied = 0;
-        this.nextIndex = new HashMap<>();
-        this.matchIndex = new HashMap<>();
+        this.commitIndex = 0L;
+        this.lastApplied = 0L;
+        this.nextIndex = new HashMap<>();;
+        this.matchIndex = new HashMap<>();;
         this.electionTimer = new Timer();
         this.role = RaftServerRole.FOLLOWER;
         this.isDead = false;
@@ -122,27 +130,58 @@ public class RaftServer {
         electionScheduledFuture = null;
 
         LOG_DIR_PATH = logDirPath;
-        ENTRY_LOG_FILE_NAME = "Server" + serverID;
-        this.persistor = new RaftPersistor(LOG_DIR_PATH, ENTRY_LOG_FILE_NAME);
+        ENTRY_LOG_FILE_NAME = "Server" + serverID + "_Data";
+        LOG_META_FILE_NAME = "Server" + serverID + "_Meta";
+        this.raftLogPersistor = new RaftLogPersistor(LOG_DIR_PATH, ENTRY_LOG_FILE_NAME);
+        this.raftLogMetaPersistor = new RaftMetaPersistor(LOG_DIR_PATH, LOG_META_FILE_NAME);
+
+        this.logEntries = new ArrayList<>();
+        this.logIndex = 1L; // Index start from 1
     }
 
     public void start() throws Exception {
         LOG.info("Server {} start...", serverID);
-
-        // Initializing log.
-        LOG.info("Server {} initializing log...", serverID);
-        this.logEntries = persistor.read();
+        // Recover log entries
+        LOG.info("Server {} recovering log meta...", serverID);
+        logEntries = raftLogPersistor.read();
+        LOG.info("Server {} recovering log meta done", serverID);
+        // Recover log metadata
+        LOG.info("Server {} recovering log meta...", serverID);
+        loadLogMeta();
+        LOG.info("Server {} recovering log meta done", serverID);
 
         // Start Server and reset timer for next election.
         receiver.start();
         resetElectionTimer();
-        LOG.info("Server {} starts.", serverID);
+        LOG.info("Server {} is now running.", serverID);
         System.out.println("Server starts.");
 //        receiver.blockUntilShutdown();
     }
 
+    private void loadLogMeta() {
+        // Load commit Index
+        for (int i = logEntries.size(); i >= 0; i--) {
+            RaftProto.Entry entry = logEntries.get(i - 1);
+            if (entry.getIsCommitted() && i > commitIndex) {
+                commitIndex = i;
+                return;
+            }
+        }
+        // Load Last Applied
+        lastApplied = Math.max(lastApplied, logEntries.size());
+        currentTerm = raftLogMetaPersistor.getCurrentTerm();
+        votedFor = raftLogMetaPersistor.getVotedFor();
+        logIndex = logEntries.size();
+    }
+
     public void stop() throws Exception {
         receiver.stop();
+        synchronized (lock) {
+            // Persist the log metadata for future recovery.
+            raftLogMetaPersistor.persist(new LogMetaData(currentTerm, votedFor).getMetaData());
+            raftLogMetaPersistor.stop();
+            raftLogPersistor.stop();
+        }
         LOG.info("Server {} stops.", serverID);
     }
 
@@ -154,8 +193,12 @@ public class RaftServer {
         this.currentTerm = currentTerm;
     }
 
-    public int getCommitIndex() {
+    public long getCommitIndex() {
         return commitIndex;
+    }
+
+    public long getLastApplied() {
+        return lastApplied;
     }
 
     public RaftServerRole getRole() {
@@ -223,14 +266,22 @@ public class RaftServer {
                      votesReceived++;
                      // Get elected as a leader, remember to plus one as by default the RaftServer will vote for itself.
                      if (votesReceived + 1 > numOfServers / 2) {
-                         setRole(RaftServerRole.LEADER);
-                         sendHeartbeats();
+                         onGetElectedAsLeader();
                      }
                  }
              } else {
                  LOG.info("Server {} is not a candidate but a {}.", serverID, getRole());
              }
          }
+     }
+
+     private void onGetElectedAsLeader() {
+         setRole(RaftServerRole.LEADER);
+         for (int serverID : serverToSender.keySet()) {
+             nextIndex.put(serverID, logIndex + 1); // TODO: Need to check logIndex logic
+             matchIndex.put(serverID, 0L);
+         }
+         sendHeartbeats();
      }
 
      public void sendHeartbeats() {

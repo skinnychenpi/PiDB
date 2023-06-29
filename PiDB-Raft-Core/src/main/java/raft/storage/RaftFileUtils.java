@@ -121,6 +121,21 @@ public class RaftFileUtils {
         }
     }
 
+    public static  <T extends Message> void overwriteProtoToFile(RandomAccessFile raf, T message) {
+        byte[] messageBytes = message.toByteArray();
+        long crc32 = getCRC32(messageBytes);
+        try {
+            // This is how I overwrite the whole file.
+            raf.setLength(0);
+            raf.writeLong(crc32);
+            raf.writeInt(messageBytes.length);
+            raf.write(messageBytes);
+        } catch (IOException ex) {
+            LOG.warn("overwrite proto to file error, msg={}", ex.getMessage());
+            throw new RuntimeException("overwrite proto to file error");
+        }
+    }
+
     public static long getCRC32(byte[] data) {
         CRC32 crc32 = new CRC32();
         crc32.update(data);

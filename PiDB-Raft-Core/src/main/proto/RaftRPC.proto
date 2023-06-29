@@ -31,6 +31,13 @@ message Entry {
   // If it's a get message, then no value should be attached.
   int32 value = 3;
   int32 term = 4;
+  int64 index = 5;
+  bool isCommitted = 6;
+}
+
+message MetaData {
+  int32 currentTerm = 1;
+  int32 votedFor = 2;
 }
 
 

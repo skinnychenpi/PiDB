@@ -9,13 +9,13 @@ import rpc.RaftProto;
 public class LogEntry {
      private final RaftProto.Entry entry;
      private static final Logger LOG = LoggerFactory.getLogger(LogEntry.class);
-     public LogEntry(LogAction action, String key, int value, int term) {
+     public LogEntry(LogAction action, String key, int value, int term, int index) {
          switch (action) {
              case GET:
-                 entry = RaftProto.Entry.newBuilder().setAction(RaftProto.Action.GET).setKey(key).setTerm(term).build();
+                 entry = RaftProto.Entry.newBuilder().setAction(RaftProto.Action.GET).setKey(key).setTerm(term).setIndex(index).build();
                  break;
              case PUT:
-                 entry = RaftProto.Entry.newBuilder().setAction(RaftProto.Action.PUT).setKey(key).setValue(value).setTerm(term).build();
+                 entry = RaftProto.Entry.newBuilder().setAction(RaftProto.Action.PUT).setKey(key).setValue(value).setTerm(term).setIndex(index).build();
                  break;
              default:
                  entry = null;

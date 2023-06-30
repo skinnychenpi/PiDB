@@ -78,6 +78,7 @@ public class RaftMessageReceiver {
         gRPCServer.start();
         LOG.info("Server {} started, listening on {}", raftServer.getServerId(), port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            raftServer.persistOnServerStop();
             // Use stderr here since the logger may have been reset by its JVM shutdown hook.
             System.err.println("*** shutting down gRPC server since JVM is shutting down");
             try {
@@ -94,7 +95,8 @@ public class RaftMessageReceiver {
     /** Stop serving requests and shutdown resources. */
     public void stop() throws InterruptedException {
         if (gRPCServer != null) {
-            gRPCServer.shutdown().awaitTermination(30, TimeUnit.SECONDS);
+            gRPCServer.shutdownNow();
+//            gRPCServer.shutdown().awaitTermination(0, TimeUnit.SECONDS);
         }
     }
 

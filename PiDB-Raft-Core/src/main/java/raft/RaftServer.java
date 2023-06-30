@@ -142,9 +142,9 @@ public class RaftServer {
     public void start() throws Exception {
         LOG.info("Server {} start...", serverID);
         // Recover log entries
-        LOG.info("Server {} recovering log meta...", serverID);
+        LOG.info("Server {} recovering log...", serverID);
         logEntries = raftLogPersistor.read();
-        LOG.info("Server {} recovering log meta done", serverID);
+        LOG.info("Server {} recovering log done", serverID);
         // Recover log metadata
         LOG.info("Server {} recovering log meta...", serverID);
         loadLogMeta();
@@ -164,7 +164,7 @@ public class RaftServer {
             RaftProto.Entry entry = logEntries.get(i - 1);
             if (entry.getIsCommitted() && i > commitIndex) {
                 commitIndex = i;
-                return;
+                break;
             }
         }
         // Load Last Applied
@@ -175,14 +175,25 @@ public class RaftServer {
     }
 
     public void stop() throws Exception {
+        // Stop the timer
+        if (electionScheduledFuture != null) {
+            electionScheduledFuture.cancel(true);
+        }
         receiver.stop();
+        LOG.info("Server {} stops.", serverID);
+    }
+
+    /**
+     * This method is added to the shutdown hook. On server exit, the metadata will automatically write into the file.
+     * */
+    public void persistOnServerStop() {
         synchronized (lock) {
             // Persist the log metadata for future recovery.
             raftLogMetaPersistor.persist(new LogMetaData(currentTerm, votedFor).getMetaData());
             raftLogMetaPersistor.stop();
             raftLogPersistor.stop();
         }
-        LOG.info("Server {} stops.", serverID);
+        LOG.info("Server {} persist data done.", serverID);
     }
 
     public int getCurrentTerm() {

@@ -46,15 +46,15 @@ public class RaftServer {
      * */
     private int votedFor;
 
-    private long commitIndex;
+    private int commitIndex;
 
-    private long lastApplied;
+    private int lastApplied;
 
     private List<RaftProto.Entry> logEntries;
 
-    private Map<Integer, Long> nextIndex;
+    private Map<Integer, Integer> nextIndex;
 
-    private Map<Integer, Long> matchIndex;
+    private Map<Integer, Integer> matchIndex;
 
     private Timer electionTimer;
 
@@ -87,15 +87,15 @@ public class RaftServer {
     private final String LOG_META_FILE_NAME;
 
     //TODO: Not quite sure log index is necessary or not !!!!!!!!
-    private long logIndex;
+    private int logIndex;
 
     public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress, String logDirPath) {
         this.serverID = serverID;
         this.port = port;
         this.currentTerm = 0;
         this.votedFor = NO_VOTE;
-        this.commitIndex = 0L;
-        this.lastApplied = 0L;
+        this.commitIndex = 0;
+        this.lastApplied = 0;
         this.nextIndex = new HashMap<>();;
         this.matchIndex = new HashMap<>();;
         this.electionTimer = new Timer();
@@ -136,7 +136,7 @@ public class RaftServer {
         this.raftLogMetaPersistor = new RaftMetaPersistor(LOG_DIR_PATH, LOG_META_FILE_NAME);
 
         this.logEntries = new ArrayList<>();
-        this.logIndex = 1L; // Index start from 1
+        this.logIndex = 1; // Index start from 1
     }
 
     public void start() throws Exception {
@@ -154,12 +154,11 @@ public class RaftServer {
         receiver.start();
         resetElectionTimer();
         LOG.info("Server {} is now running.", serverID);
-        System.out.println("Server starts.");
 //        receiver.blockUntilShutdown();
     }
 
     private void loadLogMeta() {
-        // Load commit Index
+        // Load commit Index from log entries
         for (int i = logEntries.size(); i >= 1; i--) {
             RaftProto.Entry entry = logEntries.get(i - 1);
             if (entry.getIsCommitted() && i > commitIndex) {
@@ -167,7 +166,7 @@ public class RaftServer {
                 break;
             }
         }
-        // Load Last Applied
+        // Load Last Applied from log entries
         lastApplied = Math.max(lastApplied, logEntries.size());
         currentTerm = raftLogMetaPersistor.getCurrentTerm();
         votedFor = raftLogMetaPersistor.getVotedFor();
@@ -188,6 +187,11 @@ public class RaftServer {
      * */
     public void persistOnServerStop() {
         synchronized (lock) {
+            // Persist the log entries for future recovery.
+            // TODO: In the future, the log entries might be persisted on alteration, rather than persist all on exit.
+            //  Need to think about whether it is necessary and feasible or not.
+            raftLogPersistor.persist(logEntries);
+
             // Persist the log metadata for future recovery.
             raftLogMetaPersistor.persist(new LogMetaData(currentTerm, votedFor).getMetaData());
             raftLogMetaPersistor.stop();
@@ -204,11 +208,15 @@ public class RaftServer {
         this.currentTerm = currentTerm;
     }
 
-    public long getCommitIndex() {
+    public int getCommitIndex() {
         return commitIndex;
     }
 
-    public long getLastApplied() {
+    public void setCommitIndex(int commitIndex) {
+        this.commitIndex = commitIndex;
+    }
+
+    public int getLastApplied() {
         return lastApplied;
     }
 
@@ -290,7 +298,7 @@ public class RaftServer {
          setRole(RaftServerRole.LEADER);
          for (int serverID : serverToSender.keySet()) {
              nextIndex.put(serverID, logIndex + 1); // TODO: Need to check logIndex logic
-             matchIndex.put(serverID, 0L);
+             matchIndex.put(serverID, 0);
          }
          sendHeartbeats();
      }
@@ -302,7 +310,8 @@ public class RaftServer {
          //  rather than implement the heartbeat logic inside here.
          for (int targetServerID : serverToSender.keySet()) {
              RaftMessageSender sender = serverToSender.get(targetServerID);
-             sender.appendEntriesAsync(getCurrentTerm(), getServerId(), -1, -1, new ArrayList<>(), -1);
+             RaftProto.Entry lastLog = getLastLog();
+             sender.appendEntriesAsync(getCurrentTerm(), getServerId(), lastLog == null ? -1 : lastLog.getIndex(), lastLog == null ? -1 : lastLog.getTerm(), new ArrayList<>(), -1);
          }
      }
 
@@ -362,7 +371,39 @@ public class RaftServer {
         }
     }
 
-    public void onReceiverReceiveAppendRequest() {
+    public boolean onReceiverReceiveAppendRequest(int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> leaderSentNewEntries, int leaderCommit) {
+        // Receiver implementation 2: Reply false if log doesn't contain an entry at prevLogIndex whose term matches prevLogTerm.
+        if (prevLogIndex > logEntries.size()) {
+            return false;
+        }
+        RaftProto.Entry entryAtPrevLogIndex = logEntries.get(prevLogIndex - 1); // Minus one because log index starts from 1.
+        if (entryAtPrevLogIndex.getTerm() != prevLogTerm) {
+            return false;
+        }
+        // Receiver implementation 3, 4: If an existing entry conflicts with a new one, delete the existing entry and all that follow it.
+        // Append new entries if not in the log.
+        for (int i = 0; i < leaderSentNewEntries.size(); i++) {
+            RaftProto.Entry leaderEntry = leaderSentNewEntries.get(i);
+            int followerLogIndex = prevLogIndex + 1 + i;
+            if (followerLogIndex < logEntries.size()) {
+                RaftProto.Entry followerEntry = logEntries.get(followerLogIndex);
+                if (!followerEntry.equals(leaderEntry)) {
+                    logEntries.set(followerLogIndex, leaderEntry);
+                }
+            } else {
+                logEntries.add(leaderEntry);
+            }
+        }
 
+        // Receiver implementation 5: Please refer to Raft paper.
+        if (leaderCommit > getCommitIndex()) {
+            setCommitIndex(Math.min(leaderCommit, logEntries.size())); // TODO: Check the logic here. Also I use logEntries.size() because I set the start of the index as 1 but not 0.
+        }
+
+        return true;
+    }
+
+    public RaftProto.Entry getLastLog() {
+         return logEntries.isEmpty() ? null : logEntries.get(logEntries.size() - 1);
     }
 }

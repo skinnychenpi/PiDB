@@ -48,8 +48,8 @@ public class RaftMessageReceiver {
     }
 
 
-    private long getLastLogIndex() {
-        return 0L;
+    private int getLastLogIndex() {
+        return 0;
     }
 
 
@@ -157,9 +157,9 @@ public class RaftMessageReceiver {
                 }
                 // TODO: Currently the append entry receiving logic is not implemented, only the skeleton method is created.
                 // If it is not a heartbeat:
-                raftServer.onReceiverReceiveAppendRequest();
+                boolean success = raftServer.onReceiverReceiveAppendRequest(request.getPrevLogIndex(), request.getPrevLogTerm(), request.getEntriesList(), request.getLeaderCommit());
                 return RaftProto.AppendResponse.newBuilder()
-                        .setSuccess(false)
+                        .setSuccess(success)
                         .setTerm(currentTerm)
                         .build();
             }
@@ -186,15 +186,19 @@ public class RaftMessageReceiver {
                         raftServer.setCurrentTerm(candidateTerm);
                         raftServer.setRole(RaftServerRole.FOLLOWER);
                         raftServer.setVotedFor(RaftServer.NO_VOTE);
+                        // In this case, we need to update current term to the latest, which is the candidate term.
+                        currentTerm = candidateTerm;
                     }
                     int votedFor = raftServer.getVotedFor();
-                    // Here we need to lock.
-                    if (votedFor == RaftServer.NO_VOTE) {
-                        raftServer.setVotedFor(candidateID);
+                    // if voted for is null or candidate ID, and candidate's log is at least as up-to-date as receiver's log, grant vote.
+                    if (votedFor == RaftServer.NO_VOTE || votedFor == candidateID) {
                         // grant vote if the candidate's log is at least as up to date as receiver's log
                         // up to date is defined in 5.4.1
-                        // TODO: Here the method getLastLogIndex() must be reimplemented!!!!!!
-                        if (candidateTerm > currentTerm || (candidateTerm == currentTerm && request.getLastLogIndex() >= getLastLogIndex())) {
+                        RaftProto.Entry serverLastLog = raftServer.getLastLog();
+                        if (isCandidateLogMoreUpToDate(request.getLastLogTerm(), request.getLastLogIndex(), serverLastLog == null ? -1 : serverLastLog.getTerm(), serverLastLog == null ? -1 : serverLastLog.getIndex())) {
+                            if (votedFor == RaftServer.NO_VOTE) {
+                                raftServer.setVotedFor(candidateID);
+                            }
                             LOG.debug("Server {} currentTerm = {}, votedFor = {}, receives candidateTerm = {} from Server {}",
                                     raftServer.getServerId(), currentTerm, raftServer.getVotedFor(), candidateTerm, candidateID);
                             return responseBuilder.setVoteGranted(true).setTerm(currentTerm).build();
@@ -204,5 +208,13 @@ public class RaftMessageReceiver {
                 return responseBuilder.setVoteGranted(false).setTerm(currentTerm).build();
             }
         }
+
+        private boolean isCandidateLogMoreUpToDate(int candidateLastLogTerm, int candidateLastLogIndex, int receiverLastLogTerm, int receiverLastLogIndex) {
+            if (candidateLastLogTerm == receiverLastLogTerm) {
+                return candidateLastLogIndex >= receiverLastLogIndex;
+            }
+            return candidateLastLogTerm > receiverLastLogTerm;
+        }
+
     }
 }

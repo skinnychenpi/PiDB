@@ -327,9 +327,20 @@ public class RaftServer {
      }
 
 
-     // Should check this method.
+     /**
+      * Based on Figure 2 Rules for Servers(Followers):
+      * If election timeout elapses without receiving AppendEntries RPC from current leader or granting vote to candidate: convert to candidate.
+      * We can know that upon:
+      * a) you get an AppendEntries RPC from the current leader (i.e., if the term in the AppendEntries arguments is outdated, you should not reset your timer);
+      * b) you are starting an election;
+      * or c) you grant a vote to another peer.
+      * */
      public void resetElectionTimer() {
-        electionScheduledFuture = scheduledExecutorService.schedule(this::beginElection, getTimeForNextElection(), TimeUnit.MILLISECONDS);
+         // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
+         if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
+             electionScheduledFuture.cancel(true);
+         }
+         electionScheduledFuture = scheduledExecutorService.schedule(this::beginElection, getTimeForNextElection(), TimeUnit.MILLISECONDS);
      }
 
     /**
@@ -359,17 +370,6 @@ public class RaftServer {
          LOG.info("The vote timer is set as {}ms for server {}", periodInInt, serverID);
          return (int) period;
      }
-
-
-    public void onReceiverReceiveHeartbeat(int leaderID) {
-        setLeaderID(leaderID);
-
-        // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
-        if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
-            electionScheduledFuture.cancel(true);
-            resetElectionTimer();
-        }
-    }
 
     public boolean onReceiverReceiveAppendRequest(int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> leaderSentNewEntries, int leaderCommit) {
         // Receiver implementation 2: Reply false if log doesn't contain an entry at prevLogIndex whose term matches prevLogTerm.

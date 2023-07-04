@@ -136,6 +136,7 @@ public class RaftMessageReceiver {
             RaftProto.AppendResponse.Builder builder = RaftProto.AppendResponse.newBuilder();
             List<RaftProto.Entry> entries = request.getEntriesList();
             int leaderTerm = request.getTerm();
+            int leaderID = request.getLeaderID();
             synchronized (raftServerSharedLock) {
                 int currentTerm = raftServer.getCurrentTerm();
                 if (leaderTerm < currentTerm) {
@@ -146,17 +147,21 @@ public class RaftMessageReceiver {
                     raftServer.setCurrentTerm(leaderTerm);
                     raftServer.setRole(RaftServerRole.FOLLOWER);
                     raftServer.setVotedFor(RaftServer.NO_VOTE);
+                    raftServer.setLeaderID(leaderID);
                 }
+                // If receive an AE RPC from current leader, reset election timer. Click resetElectionTimer for more comments.
+                // Since when leader term is larger than current term, we set the current term as the same as the leader term.
+                // Hence, when executing below code, the leader term must be equal to the server node's current term.
+                raftServer.resetElectionTimer();
+
                 // If it is a heart beat:
                 if (entries.size() == 0) {
-                    raftServer.onReceiverReceiveHeartbeat(request.getLeaderID());
                     return RaftProto.AppendResponse.newBuilder()
                             .setSuccess(true)
                             .setTerm(currentTerm)
                             .build();
                 }
-                // TODO: Currently the append entry receiving logic is not implemented, only the skeleton method is created.
-                // If it is not a heartbeat:
+                // If it is not only a heartbeat:
                 boolean success = raftServer.onReceiverReceiveAppendRequest(request.getPrevLogIndex(), request.getPrevLogTerm(), request.getEntriesList(), request.getLeaderCommit());
                 return RaftProto.AppendResponse.newBuilder()
                         .setSuccess(success)
@@ -201,6 +206,8 @@ public class RaftMessageReceiver {
                             }
                             LOG.debug("Server {} currentTerm = {}, votedFor = {}, receives candidateTerm = {} from Server {}",
                                     raftServer.getServerId(), currentTerm, raftServer.getVotedFor(), candidateTerm, candidateID);
+                            // reset the election upon granting vote to another peer.
+                            raftServer.resetElectionTimer();
                             return responseBuilder.setVoteGranted(true).setTerm(currentTerm).build();
                         }
                     }

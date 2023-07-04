@@ -130,7 +130,7 @@ public class RaftMessageReceiver {
         }
 
         /**
-         * Currently only heartbeat is implemented.
+         * This is the core logic of AppendEntry RPC. Please refer to Figure 2 of Raft paper.
          */
         private RaftProto.AppendResponse receiverHandleAppendRequest(RaftProto.AppendRequest request) {
             RaftProto.AppendResponse.Builder builder = RaftProto.AppendResponse.newBuilder();
@@ -147,8 +147,8 @@ public class RaftMessageReceiver {
                     raftServer.setCurrentTerm(leaderTerm);
                     raftServer.setRole(RaftServerRole.FOLLOWER);
                     raftServer.setVotedFor(RaftServer.NO_VOTE);
-                    raftServer.setLeaderID(leaderID);
                 }
+                raftServer.setLeaderID(leaderID);
                 // If receive an AE RPC from current leader, reset election timer. Click resetElectionTimer for more comments.
                 // Since when leader term is larger than current term, we set the current term as the same as the leader term.
                 // Hence, when executing below code, the leader term must be equal to the server node's current term.

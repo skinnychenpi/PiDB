@@ -183,7 +183,7 @@ public class RaftServer {
     }
 
     /**
-     * This method is added to the shutdown hook. On server exit, the metadata will automatically write into the file.
+     * This method is added to the shutdown hook. On server exit, the metadata and log will be automatically persisted.
      * */
     public void persistOnServerStop() {
         synchronized (lock) {
@@ -279,6 +279,7 @@ public class RaftServer {
              if (response.getTerm() > currentTerm) {
                  currentTerm = response.getTerm();
                  setRole(RaftServerRole.FOLLOWER);
+                 setLeaderID(NO_LEADER);
              }
              if (getRole() == RaftServerRole.CANDIDATE) {
                  if (response.getVoteGranted()) {
@@ -296,6 +297,7 @@ public class RaftServer {
 
      private void onGetElectedAsLeader() {
          setRole(RaftServerRole.LEADER);
+         setLeaderID(serverID);
          for (int serverID : serverToSender.keySet()) {
              nextIndex.put(serverID, logIndex + 1); // TODO: Need to check logIndex logic
              matchIndex.put(serverID, 0);
@@ -322,6 +324,7 @@ public class RaftServer {
              if (response.getTerm() > currentTerm) {
                  currentTerm = response.getTerm();
                  setRole(RaftServerRole.FOLLOWER);
+                 setLeaderID(NO_LEADER);
              }
          }
      }
@@ -355,6 +358,7 @@ public class RaftServer {
              setRole(RaftServerRole.CANDIDATE);
              setVotedFor(serverID);
              votesReceived = 0;
+             setLeaderID(NO_LEADER);
          }
          resetElectionTimer();
          requestVote(currentTerm, serverID, 0, 0);

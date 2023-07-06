@@ -76,6 +76,8 @@ public class RaftServer {
 
     private ScheduledFuture electionScheduledFuture;
 
+    private ScheduledFuture heartbeatScheduledFuture;
+
     public static final int NO_VOTE = -1;
 
     public static final int NO_LEADER = -1;
@@ -128,6 +130,7 @@ public class RaftServer {
 
         scheduledExecutorService = Executors.newScheduledThreadPool(2);
         electionScheduledFuture = null;
+        heartbeatScheduledFuture = null;
 
         LOG_DIR_PATH = logDirPath;
         ENTRY_LOG_FILE_NAME = "Server" + serverID + "_Data";
@@ -253,6 +256,7 @@ public class RaftServer {
         // This code is for testing....
         RaftMessageSender sender = serverToSender.get(serverID);
         RaftProto.AppendResponse response = sender.appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
+        sender.appendEntriesAsync(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
     }
 
 
@@ -303,6 +307,7 @@ public class RaftServer {
              matchIndex.put(serverID, 0);
          }
          sendHeartbeats();
+         resetHeartbeatTimer();
      }
 
      public void sendHeartbeats() {
@@ -310,10 +315,20 @@ public class RaftServer {
          //  then we should merge this for loop into the AppendEntries method rather than keep it in this method.
          //  What we need to do is to invoke the appendEntries RPC inside this method
          //  rather than implement the heartbeat logic inside here.
-         for (int targetServerID : serverToSender.keySet()) {
-             RaftMessageSender sender = serverToSender.get(targetServerID);
-             RaftProto.Entry lastLog = getLastLog();
-             sender.appendEntriesAsync(getCurrentTerm(), getServerId(), lastLog == null ? -1 : lastLog.getIndex(), lastLog == null ? -1 : lastLog.getTerm(), new ArrayList<>(), -1);
+         synchronized (lock) {
+             // Only leader can send out heartbeat.
+             if (getRole() != RaftServerRole.LEADER) {
+                 if (heartbeatScheduledFuture != null && !heartbeatScheduledFuture.isDone()) {
+                     heartbeatScheduledFuture.cancel(true);
+                     heartbeatScheduledFuture = null;
+                     return;
+                 }
+             }
+             for (int targetServerID : serverToSender.keySet()) {
+                 RaftMessageSender sender = serverToSender.get(targetServerID);
+                 RaftProto.Entry lastLog = getLastLog();
+                 sender.appendEntriesAsync(getCurrentTerm(), getServerId(), lastLog == null ? -1 : lastLog.getIndex(), lastLog == null ? -1 : lastLog.getTerm(), new ArrayList<>(), -1);
+             }
          }
      }
 
@@ -327,6 +342,33 @@ public class RaftServer {
                  setLeaderID(NO_LEADER);
              }
          }
+     }
+
+     /**
+      * Upon elected as a leader, the raft server is supposed to send out a heartbeat immediately.
+      * After that, whenever the leader is idle (not receiving any command from the client), a periodic heartbeat should be sent to maintain its authority.
+      * */
+     public void resetHeartbeatTimer() {
+         // TODO: Below is the logic for this function:
+         //  1. Upon a server get elected as a leader, send out a heartbeat immediately. Meanwhile, schedule the periodic heartbeat.
+         //  1. Whenever receiving a command from the client, we should reset the periodic heartbeat timer. (Only send heartbeat when idling).
+         //  2. When the timer expires, sending out the heartbeat to all other servers.
+         //  Make sure to check the role of the server upon sending out the heartbeat. If it is not a leader, then we need to stop scheduling the heartbeat.
+         if (heartbeatScheduledFuture != null && !heartbeatScheduledFuture.isDone()) {
+             heartbeatScheduledFuture.cancel(true);
+         }
+         heartbeatScheduledFuture = scheduledExecutorService.schedule(this::sendHeartbeats, getTimeForNextScheduledHeartbeat(), TimeUnit.MILLISECONDS);
+     }
+
+     private int getTimeForNextScheduledHeartbeat() {
+         // Here we assume the period to start a vote is generated randomly from a fixed interval.
+         // TODO: In the future, the lower bound and upper bound should be retrieved from the config file.
+         int lowerBound = 250;
+         int upperBound = 500;
+         double period = lowerBound + (upperBound - lowerBound) * Math.random();
+         int periodInInt = (int) period;
+         LOG.info("The heartbeat timer is set as {}ms for server {}", periodInInt, serverID);
+         return (int) period;
      }
 
 

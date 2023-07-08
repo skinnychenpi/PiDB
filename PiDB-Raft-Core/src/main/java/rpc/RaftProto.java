@@ -173,10 +173,10 @@ public final class RaftProto {
     int getTerm();
 
     /**
-     * <code>int64 index = 5;</code>
+     * <code>int32 index = 5;</code>
      * @return The index.
      */
-    long getIndex();
+    int getIndex();
 
     /**
      * <code>bool isCommitted = 6;</code>
@@ -305,13 +305,13 @@ public final class RaftProto {
     }
 
     public static final int INDEX_FIELD_NUMBER = 5;
-    private long index_ = 0L;
+    private int index_ = 0;
     /**
-     * <code>int64 index = 5;</code>
+     * <code>int32 index = 5;</code>
      * @return The index.
      */
     @java.lang.Override
-    public long getIndex() {
+    public int getIndex() {
       return index_;
     }
 
@@ -352,8 +352,8 @@ public final class RaftProto {
       if (term_ != 0) {
         output.writeInt32(4, term_);
       }
-      if (index_ != 0L) {
-        output.writeInt64(5, index_);
+      if (index_ != 0) {
+        output.writeInt32(5, index_);
       }
       if (isCommitted_ != false) {
         output.writeBool(6, isCommitted_);
@@ -382,9 +382,9 @@ public final class RaftProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(4, term_);
       }
-      if (index_ != 0L) {
+      if (index_ != 0) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(5, index_);
+          .computeInt32Size(5, index_);
       }
       if (isCommitted_ != false) {
         size += com.google.protobuf.CodedOutputStream
@@ -436,8 +436,7 @@ public final class RaftProto {
       hash = (37 * hash) + TERM_FIELD_NUMBER;
       hash = (53 * hash) + getTerm();
       hash = (37 * hash) + INDEX_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getIndex());
+      hash = (53 * hash) + getIndex();
       hash = (37 * hash) + ISCOMMITTED_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
           getIsCommitted());
@@ -576,7 +575,7 @@ public final class RaftProto {
         key_ = "";
         value_ = 0;
         term_ = 0;
-        index_ = 0L;
+        index_ = 0;
         isCommitted_ = false;
         return this;
       }
@@ -657,7 +656,7 @@ public final class RaftProto {
         if (other.getTerm() != 0) {
           setTerm(other.getTerm());
         }
-        if (other.getIndex() != 0L) {
+        if (other.getIndex() != 0) {
           setIndex(other.getIndex());
         }
         if (other.getIsCommitted() != false) {
@@ -710,7 +709,7 @@ public final class RaftProto {
                 break;
               } // case 32
               case 40: {
-                index_ = input.readInt64();
+                index_ = input.readInt32();
                 bitField0_ |= 0x00000010;
                 break;
               } // case 40
@@ -937,21 +936,21 @@ public final class RaftProto {
         return this;
       }
 
-      private long index_ ;
+      private int index_ ;
       /**
-       * <code>int64 index = 5;</code>
+       * <code>int32 index = 5;</code>
        * @return The index.
        */
       @java.lang.Override
-      public long getIndex() {
+      public int getIndex() {
         return index_;
       }
       /**
-       * <code>int64 index = 5;</code>
+       * <code>int32 index = 5;</code>
        * @param value The index to set.
        * @return This builder for chaining.
        */
-      public Builder setIndex(long value) {
+      public Builder setIndex(int value) {
 
         index_ = value;
         bitField0_ |= 0x00000010;
@@ -959,12 +958,12 @@ public final class RaftProto {
         return this;
       }
       /**
-       * <code>int64 index = 5;</code>
+       * <code>int32 index = 5;</code>
        * @return This builder for chaining.
        */
       public Builder clearIndex() {
         bitField0_ = (bitField0_ & ~0x00000010);
-        index_ = 0L;
+        index_ = 0;
         onChanged();
         return this;
       }
@@ -1609,10 +1608,10 @@ public final class RaftProto {
      * index of log entry immediately preceding new ones
      * </pre>
      *
-     * <code>int64 prevLogIndex = 3;</code>
+     * <code>int32 prevLogIndex = 3;</code>
      * @return The prevLogIndex.
      */
-    long getPrevLogIndex();
+    int getPrevLogIndex();
 
     /**
      * <pre>
@@ -1750,17 +1749,17 @@ public final class RaftProto {
     }
 
     public static final int PREVLOGINDEX_FIELD_NUMBER = 3;
-    private long prevLogIndex_ = 0L;
+    private int prevLogIndex_ = 0;
     /**
      * <pre>
      * index of log entry immediately preceding new ones
      * </pre>
      *
-     * <code>int64 prevLogIndex = 3;</code>
+     * <code>int32 prevLogIndex = 3;</code>
      * @return The prevLogIndex.
      */
     @java.lang.Override
-    public long getPrevLogIndex() {
+    public int getPrevLogIndex() {
       return prevLogIndex_;
     }
 
@@ -1880,8 +1879,8 @@ public final class RaftProto {
       if (leaderID_ != 0) {
         output.writeInt32(2, leaderID_);
       }
-      if (prevLogIndex_ != 0L) {
-        output.writeInt64(3, prevLogIndex_);
+      if (prevLogIndex_ != 0) {
+        output.writeInt32(3, prevLogIndex_);
       }
       if (prevLogTerm_ != 0) {
         output.writeInt32(4, prevLogTerm_);
@@ -1909,9 +1908,9 @@ public final class RaftProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(2, leaderID_);
       }
-      if (prevLogIndex_ != 0L) {
+      if (prevLogIndex_ != 0) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, prevLogIndex_);
+          .computeInt32Size(3, prevLogIndex_);
       }
       if (prevLogTerm_ != 0) {
         size += com.google.protobuf.CodedOutputStream
@@ -1968,8 +1967,7 @@ public final class RaftProto {
       hash = (37 * hash) + LEADERID_FIELD_NUMBER;
       hash = (53 * hash) + getLeaderID();
       hash = (37 * hash) + PREVLOGINDEX_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getPrevLogIndex());
+      hash = (53 * hash) + getPrevLogIndex();
       hash = (37 * hash) + PREVLOGTERM_FIELD_NUMBER;
       hash = (53 * hash) + getPrevLogTerm();
       if (getEntriesCount() > 0) {
@@ -2111,7 +2109,7 @@ public final class RaftProto {
         bitField0_ = 0;
         term_ = 0;
         leaderID_ = 0;
-        prevLogIndex_ = 0L;
+        prevLogIndex_ = 0;
         prevLogTerm_ = 0;
         if (entriesBuilder_ == null) {
           entries_ = java.util.Collections.emptyList();
@@ -2202,7 +2200,7 @@ public final class RaftProto {
         if (other.getLeaderID() != 0) {
           setLeaderID(other.getLeaderID());
         }
-        if (other.getPrevLogIndex() != 0L) {
+        if (other.getPrevLogIndex() != 0) {
           setPrevLogIndex(other.getPrevLogIndex());
         }
         if (other.getPrevLogTerm() != 0) {
@@ -2274,7 +2272,7 @@ public final class RaftProto {
                 break;
               } // case 16
               case 24: {
-                prevLogIndex_ = input.readInt64();
+                prevLogIndex_ = input.readInt32();
                 bitField0_ |= 0x00000004;
                 break;
               } // case 24
@@ -2406,17 +2404,17 @@ public final class RaftProto {
         return this;
       }
 
-      private long prevLogIndex_ ;
+      private int prevLogIndex_ ;
       /**
        * <pre>
        * index of log entry immediately preceding new ones
        * </pre>
        *
-       * <code>int64 prevLogIndex = 3;</code>
+       * <code>int32 prevLogIndex = 3;</code>
        * @return The prevLogIndex.
        */
       @java.lang.Override
-      public long getPrevLogIndex() {
+      public int getPrevLogIndex() {
         return prevLogIndex_;
       }
       /**
@@ -2424,11 +2422,11 @@ public final class RaftProto {
        * index of log entry immediately preceding new ones
        * </pre>
        *
-       * <code>int64 prevLogIndex = 3;</code>
+       * <code>int32 prevLogIndex = 3;</code>
        * @param value The prevLogIndex to set.
        * @return This builder for chaining.
        */
-      public Builder setPrevLogIndex(long value) {
+      public Builder setPrevLogIndex(int value) {
 
         prevLogIndex_ = value;
         bitField0_ |= 0x00000004;
@@ -2440,12 +2438,12 @@ public final class RaftProto {
        * index of log entry immediately preceding new ones
        * </pre>
        *
-       * <code>int64 prevLogIndex = 3;</code>
+       * <code>int32 prevLogIndex = 3;</code>
        * @return This builder for chaining.
        */
       public Builder clearPrevLogIndex() {
         bitField0_ = (bitField0_ & ~0x00000004);
-        prevLogIndex_ = 0L;
+        prevLogIndex_ = 0;
         onChanged();
         return this;
       }
@@ -3517,10 +3515,10 @@ public final class RaftProto {
      * index of candidate's last log entry.
      * </pre>
      *
-     * <code>int64 lastLogIndex = 3;</code>
+     * <code>int32 lastLogIndex = 3;</code>
      * @return The lastLogIndex.
      */
-    long getLastLogIndex();
+    int getLastLogIndex();
 
     /**
      * <pre>
@@ -3598,17 +3596,17 @@ public final class RaftProto {
     }
 
     public static final int LASTLOGINDEX_FIELD_NUMBER = 3;
-    private long lastLogIndex_ = 0L;
+    private int lastLogIndex_ = 0;
     /**
      * <pre>
      * index of candidate's last log entry.
      * </pre>
      *
-     * <code>int64 lastLogIndex = 3;</code>
+     * <code>int32 lastLogIndex = 3;</code>
      * @return The lastLogIndex.
      */
     @java.lang.Override
-    public long getLastLogIndex() {
+    public int getLastLogIndex() {
       return lastLogIndex_;
     }
 
@@ -3647,8 +3645,8 @@ public final class RaftProto {
       if (candidateID_ != 0) {
         output.writeInt32(2, candidateID_);
       }
-      if (lastLogIndex_ != 0L) {
-        output.writeInt64(3, lastLogIndex_);
+      if (lastLogIndex_ != 0) {
+        output.writeInt32(3, lastLogIndex_);
       }
       if (lastLogTerm_ != 0) {
         output.writeInt32(4, lastLogTerm_);
@@ -3670,9 +3668,9 @@ public final class RaftProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(2, candidateID_);
       }
-      if (lastLogIndex_ != 0L) {
+      if (lastLogIndex_ != 0) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, lastLogIndex_);
+          .computeInt32Size(3, lastLogIndex_);
       }
       if (lastLogTerm_ != 0) {
         size += com.google.protobuf.CodedOutputStream
@@ -3717,8 +3715,7 @@ public final class RaftProto {
       hash = (37 * hash) + CANDIDATEID_FIELD_NUMBER;
       hash = (53 * hash) + getCandidateID();
       hash = (37 * hash) + LASTLOGINDEX_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getLastLogIndex());
+      hash = (53 * hash) + getLastLogIndex();
       hash = (37 * hash) + LASTLOGTERM_FIELD_NUMBER;
       hash = (53 * hash) + getLastLogTerm();
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3854,7 +3851,7 @@ public final class RaftProto {
         bitField0_ = 0;
         term_ = 0;
         candidateID_ = 0;
-        lastLogIndex_ = 0L;
+        lastLogIndex_ = 0;
         lastLogTerm_ = 0;
         return this;
       }
@@ -3921,7 +3918,7 @@ public final class RaftProto {
         if (other.getCandidateID() != 0) {
           setCandidateID(other.getCandidateID());
         }
-        if (other.getLastLogIndex() != 0L) {
+        if (other.getLastLogIndex() != 0) {
           setLastLogIndex(other.getLastLogIndex());
         }
         if (other.getLastLogTerm() != 0) {
@@ -3964,7 +3961,7 @@ public final class RaftProto {
                 break;
               } // case 16
               case 24: {
-                lastLogIndex_ = input.readInt64();
+                lastLogIndex_ = input.readInt32();
                 bitField0_ |= 0x00000004;
                 break;
               } // case 24
@@ -4078,17 +4075,17 @@ public final class RaftProto {
         return this;
       }
 
-      private long lastLogIndex_ ;
+      private int lastLogIndex_ ;
       /**
        * <pre>
        * index of candidate's last log entry.
        * </pre>
        *
-       * <code>int64 lastLogIndex = 3;</code>
+       * <code>int32 lastLogIndex = 3;</code>
        * @return The lastLogIndex.
        */
       @java.lang.Override
-      public long getLastLogIndex() {
+      public int getLastLogIndex() {
         return lastLogIndex_;
       }
       /**
@@ -4096,11 +4093,11 @@ public final class RaftProto {
        * index of candidate's last log entry.
        * </pre>
        *
-       * <code>int64 lastLogIndex = 3;</code>
+       * <code>int32 lastLogIndex = 3;</code>
        * @param value The lastLogIndex to set.
        * @return This builder for chaining.
        */
-      public Builder setLastLogIndex(long value) {
+      public Builder setLastLogIndex(int value) {
 
         lastLogIndex_ = value;
         bitField0_ |= 0x00000004;
@@ -4112,12 +4109,12 @@ public final class RaftProto {
        * index of candidate's last log entry.
        * </pre>
        *
-       * <code>int64 lastLogIndex = 3;</code>
+       * <code>int32 lastLogIndex = 3;</code>
        * @return This builder for chaining.
        */
       public Builder clearLastLogIndex() {
         bitField0_ = (bitField0_ & ~0x00000004);
-        lastLogIndex_ = 0L;
+        lastLogIndex_ = 0;
         onChanged();
         return this;
       }
@@ -4828,16 +4825,16 @@ public final class RaftProto {
       "\n\rRaftRPC.proto\022\004raft\032\031google/protobuf/a" +
       "ny.proto\"s\n\005Entry\022\034\n\006action\030\001 \001(\0162\014.raft" +
       ".Action\022\013\n\003key\030\002 \001(\t\022\r\n\005value\030\003 \001(\005\022\014\n\004t" +
-      "erm\030\004 \001(\005\022\r\n\005index\030\005 \001(\003\022\023\n\013isCommitted\030" +
+      "erm\030\004 \001(\005\022\r\n\005index\030\005 \001(\005\022\023\n\013isCommitted\030" +
       "\006 \001(\010\"1\n\010MetaData\022\023\n\013currentTerm\030\001 \001(\005\022\020" +
       "\n\010votedFor\030\002 \001(\005\"\216\001\n\rAppendRequest\022\014\n\004te" +
       "rm\030\001 \001(\005\022\020\n\010leaderID\030\002 \001(\005\022\024\n\014prevLogInd" +
-      "ex\030\003 \001(\003\022\023\n\013prevLogTerm\030\004 \001(\005\022\034\n\007entries" +
+      "ex\030\003 \001(\005\022\023\n\013prevLogTerm\030\004 \001(\005\022\034\n\007entries" +
       "\030\005 \003(\0132\013.raft.Entry\022\024\n\014leaderCommit\030\006 \001(" +
       "\005\"/\n\016AppendResponse\022\014\n\004term\030\001 \001(\005\022\017\n\007suc" +
       "cess\030\002 \001(\010\"[\n\013VoteRequest\022\014\n\004term\030\001 \001(\005\022" +
       "\023\n\013candidateID\030\002 \001(\005\022\024\n\014lastLogIndex\030\003 \001" +
-      "(\003\022\023\n\013lastLogTerm\030\004 \001(\005\"1\n\014VoteResponse\022" +
+      "(\005\022\023\n\013lastLogTerm\030\004 \001(\005\"1\n\014VoteResponse\022" +
       "\014\n\004term\030\001 \001(\005\022\023\n\013voteGranted\030\002 \001(\010*\032\n\006Ac" +
       "tion\022\007\n\003PUT\020\000\022\007\n\003GET\020\0012\177\n\007RaftRPC\022<\n\rapp" +
       "endEntries\022\023.raft.AppendRequest\032\024.raft.A" +

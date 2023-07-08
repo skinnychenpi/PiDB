@@ -46,15 +46,15 @@ public class RaftServer {
      * */
     private int votedFor;
 
-    private long commitIndex;
+    private int commitIndex;
 
-    private long lastApplied;
+    private int lastApplied;
 
     private List<RaftProto.Entry> logEntries;
 
-    private Map<Integer, Long> nextIndex;
+    private Map<Integer, Integer> nextIndex;
 
-    private Map<Integer, Long> matchIndex;
+    private Map<Integer, Integer> matchIndex;
 
     private Timer electionTimer;
 
@@ -76,6 +76,8 @@ public class RaftServer {
 
     private ScheduledFuture electionScheduledFuture;
 
+    private ScheduledFuture heartbeatScheduledFuture;
+
     public static final int NO_VOTE = -1;
 
     public static final int NO_LEADER = -1;
@@ -87,15 +89,15 @@ public class RaftServer {
     private final String LOG_META_FILE_NAME;
 
     //TODO: Not quite sure log index is necessary or not !!!!!!!!
-    private long logIndex;
+    private int logIndex;
 
     public RaftServer(int serverID, String host, int port, Map<Integer, RaftServerAddress> serverToAddress, String logDirPath) {
         this.serverID = serverID;
         this.port = port;
         this.currentTerm = 0;
         this.votedFor = NO_VOTE;
-        this.commitIndex = 0L;
-        this.lastApplied = 0L;
+        this.commitIndex = 0;
+        this.lastApplied = 0;
         this.nextIndex = new HashMap<>();;
         this.matchIndex = new HashMap<>();;
         this.electionTimer = new Timer();
@@ -128,6 +130,7 @@ public class RaftServer {
 
         scheduledExecutorService = Executors.newScheduledThreadPool(2);
         electionScheduledFuture = null;
+        heartbeatScheduledFuture = null;
 
         LOG_DIR_PATH = logDirPath;
         ENTRY_LOG_FILE_NAME = "Server" + serverID + "_Data";
@@ -136,7 +139,7 @@ public class RaftServer {
         this.raftLogMetaPersistor = new RaftMetaPersistor(LOG_DIR_PATH, LOG_META_FILE_NAME);
 
         this.logEntries = new ArrayList<>();
-        this.logIndex = 1L; // Index start from 1
+        this.logIndex = 1; // Index start from 1
     }
 
     public void start() throws Exception {
@@ -154,12 +157,11 @@ public class RaftServer {
         receiver.start();
         resetElectionTimer();
         LOG.info("Server {} is now running.", serverID);
-        System.out.println("Server starts.");
 //        receiver.blockUntilShutdown();
     }
 
     private void loadLogMeta() {
-        // Load commit Index
+        // Load commit Index from log entries
         for (int i = logEntries.size(); i >= 1; i--) {
             RaftProto.Entry entry = logEntries.get(i - 1);
             if (entry.getIsCommitted() && i > commitIndex) {
@@ -167,7 +169,7 @@ public class RaftServer {
                 break;
             }
         }
-        // Load Last Applied
+        // Load Last Applied from log entries
         lastApplied = Math.max(lastApplied, logEntries.size());
         currentTerm = raftLogMetaPersistor.getCurrentTerm();
         votedFor = raftLogMetaPersistor.getVotedFor();
@@ -184,10 +186,15 @@ public class RaftServer {
     }
 
     /**
-     * This method is added to the shutdown hook. On server exit, the metadata will automatically write into the file.
+     * This method is added to the shutdown hook. On server exit, the metadata and log will be automatically persisted.
      * */
     public void persistOnServerStop() {
         synchronized (lock) {
+            // Persist the log entries for future recovery.
+            // TODO: In the future, the log entries might be persisted on alteration, rather than persist all on exit.
+            //  Need to think about whether it is necessary and feasible or not.
+            raftLogPersistor.persist(logEntries);
+
             // Persist the log metadata for future recovery.
             raftLogMetaPersistor.persist(new LogMetaData(currentTerm, votedFor).getMetaData());
             raftLogMetaPersistor.stop();
@@ -204,11 +211,15 @@ public class RaftServer {
         this.currentTerm = currentTerm;
     }
 
-    public long getCommitIndex() {
+    public int getCommitIndex() {
         return commitIndex;
     }
 
-    public long getLastApplied() {
+    public void setCommitIndex(int commitIndex) {
+        this.commitIndex = commitIndex;
+    }
+
+    public int getLastApplied() {
         return lastApplied;
     }
 
@@ -245,6 +256,7 @@ public class RaftServer {
         // This code is for testing....
         RaftMessageSender sender = serverToSender.get(serverID);
         RaftProto.AppendResponse response = sender.appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
+        sender.appendEntriesAsync(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
     }
 
 
@@ -271,6 +283,7 @@ public class RaftServer {
              if (response.getTerm() > currentTerm) {
                  currentTerm = response.getTerm();
                  setRole(RaftServerRole.FOLLOWER);
+                 setLeaderID(NO_LEADER);
              }
              if (getRole() == RaftServerRole.CANDIDATE) {
                  if (response.getVoteGranted()) {
@@ -288,11 +301,13 @@ public class RaftServer {
 
      private void onGetElectedAsLeader() {
          setRole(RaftServerRole.LEADER);
+         setLeaderID(serverID);
          for (int serverID : serverToSender.keySet()) {
              nextIndex.put(serverID, logIndex + 1); // TODO: Need to check logIndex logic
-             matchIndex.put(serverID, 0L);
+             matchIndex.put(serverID, 0);
          }
          sendHeartbeats();
+         resetHeartbeatTimer();
      }
 
      public void sendHeartbeats() {
@@ -300,9 +315,20 @@ public class RaftServer {
          //  then we should merge this for loop into the AppendEntries method rather than keep it in this method.
          //  What we need to do is to invoke the appendEntries RPC inside this method
          //  rather than implement the heartbeat logic inside here.
-         for (int targetServerID : serverToSender.keySet()) {
-             RaftMessageSender sender = serverToSender.get(targetServerID);
-             sender.appendEntriesAsync(getCurrentTerm(), getServerId(), -1, -1, new ArrayList<>(), -1);
+         synchronized (lock) {
+             // Only leader can send out heartbeat.
+             if (getRole() != RaftServerRole.LEADER) {
+                 if (heartbeatScheduledFuture != null && !heartbeatScheduledFuture.isDone()) {
+                     heartbeatScheduledFuture.cancel(true);
+                     heartbeatScheduledFuture = null;
+                     return;
+                 }
+             }
+             for (int targetServerID : serverToSender.keySet()) {
+                 RaftMessageSender sender = serverToSender.get(targetServerID);
+                 RaftProto.Entry lastLog = getLastLog();
+                 sender.appendEntriesAsync(getCurrentTerm(), getServerId(), lastLog == null ? -1 : lastLog.getIndex(), lastLog == null ? -1 : lastLog.getTerm(), new ArrayList<>(), -1);
+             }
          }
      }
 
@@ -313,14 +339,53 @@ public class RaftServer {
              if (response.getTerm() > currentTerm) {
                  currentTerm = response.getTerm();
                  setRole(RaftServerRole.FOLLOWER);
+                 setLeaderID(NO_LEADER);
              }
          }
      }
 
+     /**
+      * Upon elected as a leader, the raft server is supposed to send out a heartbeat immediately.
+      * After that, whenever the leader is idle (not receiving any command from the client), a periodic heartbeat should be sent to maintain its authority.
+      * */
+     public void resetHeartbeatTimer() {
+         // TODO: Below is the logic for this function:
+         //  1. Upon a server get elected as a leader, send out a heartbeat immediately. Meanwhile, schedule the periodic heartbeat.
+         //  1. Whenever receiving a command from the client, we should reset the periodic heartbeat timer. (Only send heartbeat when idling).
+         //  2. When the timer expires, sending out the heartbeat to all other servers.
+         //  Make sure to check the role of the server upon sending out the heartbeat. If it is not a leader, then we need to stop scheduling the heartbeat.
+         if (heartbeatScheduledFuture != null && !heartbeatScheduledFuture.isDone()) {
+             heartbeatScheduledFuture.cancel(true);
+         }
+         heartbeatScheduledFuture = scheduledExecutorService.schedule(this::sendHeartbeats, getTimeForNextScheduledHeartbeat(), TimeUnit.MILLISECONDS);
+     }
 
-     // Should check this method.
+     private int getTimeForNextScheduledHeartbeat() {
+         // Here we assume the period to start a vote is generated randomly from a fixed interval.
+         // TODO: In the future, the lower bound and upper bound should be retrieved from the config file.
+         int lowerBound = 250;
+         int upperBound = 500;
+         double period = lowerBound + (upperBound - lowerBound) * Math.random();
+         int periodInInt = (int) period;
+         LOG.info("The heartbeat timer is set as {}ms for server {}", periodInInt, serverID);
+         return (int) period;
+     }
+
+
+     /**
+      * Based on Figure 2 Rules for Servers(Followers):
+      * If election timeout elapses without receiving AppendEntries RPC from current leader or granting vote to candidate: convert to candidate.
+      * We can know that upon:
+      * a) you get an AppendEntries RPC from the current leader (i.e., if the term in the AppendEntries arguments is outdated, you should not reset your timer);
+      * b) you are starting an election;
+      * or c) you grant a vote to another peer.
+      * */
      public void resetElectionTimer() {
-        electionScheduledFuture = scheduledExecutorService.schedule(this::beginElection, getTimeForNextElection(), TimeUnit.MILLISECONDS);
+         // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
+         if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
+             electionScheduledFuture.cancel(true);
+         }
+         electionScheduledFuture = scheduledExecutorService.schedule(this::beginElection, getTimeForNextElection(), TimeUnit.MILLISECONDS);
      }
 
     /**
@@ -335,6 +400,7 @@ public class RaftServer {
              setRole(RaftServerRole.CANDIDATE);
              setVotedFor(serverID);
              votesReceived = 0;
+             setLeaderID(NO_LEADER);
          }
          resetElectionTimer();
          requestVote(currentTerm, serverID, 0, 0);
@@ -351,18 +417,39 @@ public class RaftServer {
          return (int) period;
      }
 
-
-    public void onReceiverReceiveHeartbeat(int leaderID) {
-        setLeaderID(leaderID);
-
-        // If the timer is still going, which means the timeout doesn't happen, then reset the timer.
-        if (electionScheduledFuture != null && !electionScheduledFuture.isDone()) {
-            electionScheduledFuture.cancel(true);
-            resetElectionTimer();
+    public boolean onReceiverReceiveAppendRequest(int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> leaderSentNewEntries, int leaderCommit) {
+        // Receiver implementation 2: Reply false if log doesn't contain an entry at prevLogIndex whose term matches prevLogTerm.
+        if (prevLogIndex > logEntries.size()) {
+            return false;
         }
+        RaftProto.Entry entryAtPrevLogIndex = logEntries.get(prevLogIndex - 1); // Minus one because log index starts from 1.
+        if (entryAtPrevLogIndex.getTerm() != prevLogTerm) {
+            return false;
+        }
+        // Receiver implementation 3, 4: If an existing entry conflicts with a new one, delete the existing entry and all that follow it.
+        // Append new entries if not in the log.
+        for (int i = 0; i < leaderSentNewEntries.size(); i++) {
+            RaftProto.Entry leaderEntry = leaderSentNewEntries.get(i);
+            int followerLogIndex = prevLogIndex + 1 + i;
+            if (followerLogIndex < logEntries.size()) {
+                RaftProto.Entry followerEntry = logEntries.get(followerLogIndex);
+                if (!followerEntry.equals(leaderEntry)) {
+                    logEntries.set(followerLogIndex, leaderEntry);
+                }
+            } else {
+                logEntries.add(leaderEntry);
+            }
+        }
+
+        // Receiver implementation 5: Please refer to Raft paper.
+        if (leaderCommit > getCommitIndex()) {
+            setCommitIndex(Math.min(leaderCommit, logEntries.size())); // TODO: Check the logic here. Also I use logEntries.size() because I set the start of the index as 1 but not 0.
+        }
+
+        return true;
     }
 
-    public void onReceiverReceiveAppendRequest() {
-
+    public RaftProto.Entry getLastLog() {
+         return logEntries.isEmpty() ? null : logEntries.get(logEntries.size() - 1);
     }
 }

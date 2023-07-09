@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 import org.apache.log4j.PropertyConfigurator;
+import rpc.RaftProto;
 
 public class RaftCluster {
     public static void main(String[] args) throws ExecutionException, InterruptedException {
@@ -55,6 +56,17 @@ public class RaftCluster {
             }
         });
 
+        // After 2 seconds, sending a redirect command.
+        ScheduledFuture commandSendingFuture = scheduledExecutorService.schedule(() -> {
+            try {
+                server1.handleCommandFromCluster(RaftProto.Command.newBuilder().setAction(RaftProto.Action.GET).setKey("a").setValue(2).build());
+            } catch (Exception e) {
+                System.out.println("Errors occur when trying to redirect.");
+            }
+        }, 2000, TimeUnit.MILLISECONDS);
+
+
+
         ScheduledFuture future = scheduledExecutorService.schedule(() -> {
             try {
                 server1.stop();
@@ -71,7 +83,7 @@ public class RaftCluster {
         // Experiment for log storage.
 //        String PATH = "/Users/chenyuheng/Desktop/PiDB/PiDB-Raft-Core/log";
 //        RandomAccessFile file = RaftFileUtils.openFile(PATH, "S1","rw");
-//        RaftProto.Entry entry = new LogEntry(LogAction.PUT, "asdf", 1,1).getEntry();
+//        RaftProto.Entry entry = new LogEntry(CommandAction.PUT, "asdf", 1,1).getEntry();
 //        RaftFileUtils.writeProtoToFile(file, entry);
 //        RaftFileUtils.closeFile(file);
 //

@@ -3,6 +3,7 @@ package raft;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+import rpc.CommandRedirectGrpc;
 import rpc.RaftProto;
 import rpc.RaftRPCGrpc;
 
@@ -29,7 +30,7 @@ public class RaftMessageReceiver {
     public RaftMessageReceiver(int serverId, int port, RaftServer raftServer, Object raftServerSharedLock) {
         this.serverId = serverId;
         this.port = port;
-        this.gRPCServer = ServerBuilder.forPort(port).addService(new RaftService()).build();
+        this.gRPCServer = ServerBuilder.forPort(port).addService(new RaftService()).addService(new RaftRedirectCommandService()).build();
         this.raftServerSharedLock = raftServerSharedLock;
         this.raftServer = raftServer;
     }
@@ -119,7 +120,26 @@ public class RaftMessageReceiver {
 //    }
 
 
+    private class RaftRedirectCommandService extends CommandRedirectGrpc.CommandRedirectImplBase {
+        @Override
+        public void redirectCommand(RaftProto.RedirectRequest request, StreamObserver<RaftProto.RedirectResponse> responseObserver) {
+            responseObserver.onNext(receiverHandleRedirectRequest(request));
+            responseObserver.onCompleted();
+        }
 
+        private RaftProto.RedirectResponse receiverHandleRedirectRequest(RaftProto.RedirectRequest request) {
+            RaftProto.Command command = request.getCommand();
+            synchronized (raftServerSharedLock) {
+                if (raftServer.getRole() != RaftServerRole.LEADER) {
+                    // TODO: need to set command.
+                    return RaftProto.RedirectResponse.newBuilder().setSuccess(false).setCommand(command).build();
+                }
+                // TODO: need to set command.
+                boolean success = raftServer.onLeaderHandleCommand(command);
+                return RaftProto.RedirectResponse.newBuilder().setSuccess(success).setCommand(command).build();
+            }
+        }
+    }
 
 
     private class RaftService extends RaftRPCGrpc.RaftRPCImplBase {

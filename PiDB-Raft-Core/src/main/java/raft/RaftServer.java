@@ -252,6 +252,10 @@ public class RaftServer {
         return serverID;
     }
 
+    public int getLeaderID() {
+        return leaderID;
+    }
+
     public void appendEntries(int serverID, int term, int leaderId, int prevLogIndex, int prevLogTerm, List<RaftProto.Entry> entries, int leaderCommit) {
         // This code is for testing....
         RaftMessageSender sender = serverToSender.get(serverID);
@@ -343,6 +347,52 @@ public class RaftServer {
              }
          }
      }
+
+     public void onSenderReceiveRedirectResponse(RaftProto.RedirectResponse response) {
+        boolean success = response.getSuccess();
+         LOG.info("Server {} sender receives redirect response: success = {}",
+                 this.serverID, success);
+         // If not successful, then retry until success.
+         if (!success) {
+             // TODO: For now this action will take the main thread. In the future should be put into the thread pool to resend the request.
+             RaftProto.Command command = response.getCommand();
+             redirectCommandToLeader(command);
+         }
+     }
+
+     /**
+      * This method is provided for the cluster to use. This method will parse the command and then redirect it to the leader when necessary.
+      * If the node is a leader,then process the command directly.
+      * If the node is a candidate, then return false to suggest the cluster to retry later or try another raft node.
+      * If the node is a follower, then redirect the command to the leader.
+      * The redirection guarantees that the command will eventually be passed to the leader with retry mechanism.
+      * */
+     public boolean handleCommandFromCluster(RaftProto.Command command) {
+        synchronized (lock) {
+            if (role == RaftServerRole.LEADER) {
+                boolean success = onLeaderHandleCommand(command);
+                return success;
+            } else if (role == RaftServerRole.CANDIDATE) {
+                return false;
+            }
+            redirectCommandToLeader(command);
+            return true;
+        }
+     }
+
+     public void redirectCommandToLeader(RaftProto.Command command) {
+         synchronized (lock) {
+             LOG.info("Server {} redirect command to Server {}: action = {}, key = {}, value = {}", serverID, leaderID, command.getAction(), command.getKey(), command.getValue());
+             if (leaderID == serverID) {
+                 onLeaderHandleCommand(command);
+                 return;
+             }
+             RaftMessageSender sender = serverToSender.get(leaderID);
+             sender.redirectCommandAsync(command);
+         }
+     }
+
+
 
      /**
       * Upon elected as a leader, the raft server is supposed to send out a heartbeat immediately.
@@ -451,5 +501,11 @@ public class RaftServer {
 
     public RaftProto.Entry getLastLog() {
          return logEntries.isEmpty() ? null : logEntries.get(logEntries.size() - 1);
+    }
+
+    public boolean onLeaderHandleCommand(RaftProto.Command command) {
+         // TODO:  Implement the logic here!
+        LOG.info("Server {} take command: action = {}, key = {}, value = {}", serverID, command.getAction(), command.getKey(), command.getValue());
+         return true;
     }
 }

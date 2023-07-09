@@ -1,6 +1,6 @@
 package raft.storage;
 
-public enum LogAction {
+public enum CommandAction {
     PUT,
     GET
 }

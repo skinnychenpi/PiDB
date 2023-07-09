@@ -3,11 +3,14 @@ package raft;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import raft.storage.CommandAction;
+import rpc.CommandRedirectGrpc;
 import rpc.RaftProto;
 import rpc.RaftRPCGrpc;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +21,8 @@ public class RaftMessageSender {
     private final RaftRPCGrpc.RaftRPCBlockingStub blockingStub;
     private final RaftRPCGrpc.RaftRPCStub asyncStub;
 
+    private final CommandRedirectGrpc.CommandRedirectStub redirectAsyncStub;
+
     private final RaftServer raftServer;
 
     public RaftMessageSender(String host, int port, RaftServer raftServer) {
@@ -25,6 +30,7 @@ public class RaftMessageSender {
         Channel channel = managedChannelBuilder.build();
         this.blockingStub = RaftRPCGrpc.newBlockingStub(channel);
         this.asyncStub = RaftRPCGrpc.newStub(channel);
+        this.redirectAsyncStub = CommandRedirectGrpc.newStub(channel);
         this.raftServer = raftServer;
     }
 
@@ -62,7 +68,7 @@ public class RaftMessageSender {
         }
         RaftProto.AppendRequest request = requestBuilder.build();
         try {
-            LOG.info("Raft Server {} sends append request: term = {}, leaderID = {}, prevLogIndex = {}, prevLogTerm = {}, entries = {}"
+            LOG.info("Server {} sends append request: term = {}, leaderID = {}, prevLogIndex = {}, prevLogTerm = {}, entries = {}"
                     , raftServer.getServerId(), term, leaderId, prevLogIndex, prevLogTerm, Arrays.toString(entries.toArray()));
             asyncStub.appendEntries(request, new AppendEntryObserver());
         } catch (Exception e) {
@@ -97,9 +103,41 @@ public class RaftMessageSender {
                 .setLastLogTerm(lastLogTerm)
                 .build();
         try {
-            LOG.info("Raft Server {} sends vote request: term = {}, candidateID = {}, lastLogIndex = {}, lastLogTerm = {}",
+            LOG.info("Server {} sends vote request: term = {}, candidateID = {}, lastLogIndex = {}, lastLogTerm = {}",
                     raftServer.getServerId(), term, candidateID, lastLogIndex, lastLogTerm);
             asyncStub.requestVote(request, new VoteObserver());
+        } catch (Exception e) {
+            LOG.warn("Raft Server {} RPC failed to request vote with err: {}", raftServer.getServerId(), e);
+        }
+    }
+
+    public void redirectCommandAsync(CommandAction action, String key, int value) {
+        RaftProto.RedirectRequest request;
+        switch (action) {
+            case PUT:
+                RaftProto.Command putCommand = RaftProto.Command.newBuilder().setAction(RaftProto.Action.PUT).setKey(key).setValue(value).build();
+                request = RaftProto.RedirectRequest.newBuilder().setCommand(putCommand).build();
+            case GET:
+                RaftProto.Command getCommand = RaftProto.Command.newBuilder().setAction(RaftProto.Action.PUT).setKey(key).setValue(value).build();
+                request = RaftProto.RedirectRequest.newBuilder().setCommand(getCommand).build();
+            default:
+                request = null;
+        }
+        try {
+            LOG.info("Server {} sends redirect request: Action = {}, key = {}, value = {}",
+                    raftServer.getServerId(), action, key, value);
+            redirectAsyncStub.redirectCommand(request, new RedirectCommandObserver());
+        } catch (Exception e) {
+            LOG.warn("Raft Server {} RPC failed to request vote with err: {}", raftServer.getServerId(), e);
+        }
+    }
+
+    public void redirectCommandAsync(RaftProto.Command command) {
+        RaftProto.RedirectRequest request = RaftProto.RedirectRequest.newBuilder().setCommand(command).build();
+        try {
+            LOG.info("Server {} sends redirect request: Action = {}, key = {}, value = {}",
+                    raftServer.getServerId(), command.getAction(), command.getKey(), command.getValue());
+            redirectAsyncStub.redirectCommand(request, new RedirectCommandObserver());
         } catch (Exception e) {
             LOG.warn("Raft Server {} RPC failed to request vote with err: {}", raftServer.getServerId(), e);
         }
@@ -122,7 +160,7 @@ public class RaftMessageSender {
 
         @Override
         public void onError(Throwable throwable) {
-            LOG.error("Can't get vote response: {} from {}", throwable.getMessage());
+            LOG.error("Can't get vote response: {}", throwable.getMessage());
             throwable.printStackTrace();
         }
 
@@ -140,7 +178,7 @@ public class RaftMessageSender {
 
         @Override
         public void onError(Throwable throwable) {
-            LOG.error("Can't get append response: {} from {}", throwable.getMessage());
+            LOG.error("Can't get append response: {}", throwable.getMessage());
             throwable.printStackTrace();
         }
 
@@ -148,6 +186,25 @@ public class RaftMessageSender {
         public void onCompleted() {
 //            LOG.info("Raft Server {}'s receiver AppendEntryObserver completed.", raftServer.getServerId());
         }
+    }
+
+    private class RedirectCommandObserver implements StreamObserver<RaftProto.RedirectResponse> {
+        @Override
+        public void onNext(RaftProto.RedirectResponse response) {
+            raftServer.onSenderReceiveRedirectResponse(response);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            LOG.error("Can't get redirect response: {}", throwable.getMessage());
+            throwable.printStackTrace();
+            // TODO: If network error, for instance, the leader is down, then we retry to redirect.
+            //  Now the problem is that we don't know which command is fail during sending.
+//            raftServer.redirectCommandToLeader();
+        }
+
+        @Override
+        public void onCompleted() {}
     }
 
 }

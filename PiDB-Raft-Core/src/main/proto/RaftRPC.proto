@@ -25,14 +25,17 @@ enum Action {
   GET = 1;
 }
 
-message Entry {
+message Command {
   Action action = 1;
   string key = 2;
-  // If it's a get message, then no value should be attached.
   int32 value = 3;
-  int32 term = 4;
-  int32 index = 5;
-  bool isCommitted = 6;
+}
+
+message Entry {
+  Command command = 1;
+  int32 term = 2;
+  int32 index = 3;
+  bool isCommitted = 4;
 }
 
 message MetaData {
@@ -90,4 +93,12 @@ message VoteResponse {
 
   // true means candidate receives vote.
   bool voteGranted = 2;
+}
+
+message CommandRedirectRequest {
+  Command command = 1;
+}
+
+message CommandRedirectResponse {
+  bool success = 1;
 }
